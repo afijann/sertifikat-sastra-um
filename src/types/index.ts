@@ -50,6 +50,13 @@ export interface CertificateConfig {
   fontSizeBody: number;
   frameStyle: 'classic-double' | 'ornament-gold' | 'minimal-modern';
   showQr: boolean;
+  signatureSize?: number;
+  stampSize?: number;
+  showLogos?: boolean;
+  showLogoUm?: boolean;
+  showLogoFs?: boolean;
+  showLogoDsi?: boolean;
+  hideLogoPlaceholders?: boolean;
 }
 
 export interface DashboardStats {

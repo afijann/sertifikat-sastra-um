@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EventItem, DashboardStats } from '../../types';
+import { apiClient } from '../../utils/apiClient';
 import { 
   CalendarDays, 
   Award, 
@@ -40,26 +41,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, eventsRes] = await Promise.all([
-        fetch('/api/admin/stats', {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
-        fetch('/api/admin/events', {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
+      const [statsData, eventsData] = await Promise.all([
+        apiClient.getDashboardStats(adminToken),
+        apiClient.getAllEvents(adminToken),
       ]);
 
-      if (statsRes.ok && eventsRes.ok) {
-        const statsData = await statsRes.json();
-        const eventsData = await eventsRes.json();
-        setStats(statsData);
-        setEvents(eventsData);
-      } else {
-        setError('Gagal memuat data dashboard.');
-      }
+      setStats(statsData);
+      setEvents(eventsData);
     } catch (err: any) {
       console.error(err);
-      setError('Terjadi kendala jaringan.');
+      setError('Terjadi kendala saat memuat data.');
     } finally {
       setLoading(false);
     }
@@ -67,13 +58,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const handleToggleStatus = async (eventId: string) => {
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/toggle-status`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        loadDashboardData();
-      }
+      await apiClient.toggleEventStatus(adminToken, eventId);
+      loadDashboardData();
     } catch (err) {
       console.error(err);
     }
@@ -84,13 +70,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       return;
     }
     try {
-      const res = await fetch(`/api/admin/events/${eventId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        loadDashboardData();
-      }
+      await apiClient.deleteEvent(adminToken, eventId);
+      loadDashboardData();
     } catch (err) {
       console.error(err);
     }

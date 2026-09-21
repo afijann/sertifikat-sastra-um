@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Participant, EventItem, CertificateConfig } from '../../types';
 import { CertificateCanvas } from '../../components/CertificateCanvas';
 import { downloadCertificatePdf } from '../../utils/pdfGenerator';
+import { apiClient } from '../../utils/apiClient';
 import { 
   Award, 
   Search, 
@@ -42,19 +43,13 @@ export const AdminCertificatesPage: React.FC<AdminCertificatesPageProps> = ({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [eventsRes, partsRes] = await Promise.all([
-        fetch('/api/admin/events', {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
-        fetch(`/api/admin/participants${selectedEventId ? `?eventId=${selectedEventId}` : ''}`, {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
+      const [eventsData, partsData] = await Promise.all([
+        apiClient.getAllEvents(adminToken),
+        apiClient.getParticipants(adminToken, selectedEventId),
       ]);
 
-      if (eventsRes.ok && partsRes.ok) {
-        setEvents(await eventsRes.json());
-        setParticipants(await partsRes.json());
-      }
+      setEvents(eventsData);
+      setParticipants(partsData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -79,10 +74,7 @@ export const AdminCertificatesPage: React.FC<AdminCertificatesPageProps> = ({
       updatedAt: '',
     } as EventItem;
 
-    const res = await fetch(`/api/admin/template?eventId=${p.eventId}`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    const template = res.ok ? await res.json() : null;
+    const template = await apiClient.getTemplateConfig(adminToken, p.eventId);
 
     setActiveParticipant(p);
     setActiveEvent(evt);

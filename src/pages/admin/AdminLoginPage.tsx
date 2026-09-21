@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, User, KeyRound, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
+import { Lock, User, KeyRound, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
+import { apiClient } from '../../utils/apiClient';
 
 interface AdminLoginPageProps {
   onLoginSuccess: (token: string, user: any) => void;
@@ -10,8 +11,9 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   onLoginSuccess,
   onBackToHome,
 }) => {
-  const [username, setUsername] = useState('sastraindonesia');
-  const [password, setPassword] = useState('sastrajaya');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,35 +22,28 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
     setLoading(true);
     setError(null);
 
+    const cleanUser = username.trim();
+    const cleanPass = password.trim();
+
+    if (!cleanUser || !cleanPass) {
+      setError('Username dan password wajib diisi.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Username atau password tidak cocok.');
-      }
-
-      onLoginSuccess(data.token, data.user);
+      const result = await apiClient.login(cleanUser, cleanPass);
+      onLoginSuccess(result.token, result.user);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Terjadi kesalahan saat otentikasi admin.');
+      console.warn('Login error:', err);
+      setError(err.message || 'Gagal login. Periksa username dan password Anda.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fillDefaultCredentials = () => {
-    setUsername('sastraindonesia');
-    setPassword('sastrajaya');
-    setError(null);
-  };
-
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+    <div id="admin-login-wrapper" className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
         
         {/* Top Header */}
@@ -71,7 +66,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         <div className="p-8">
           
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 flex items-center gap-2">
+            <div id="admin-login-error" className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
               <span>{error}</span>
             </div>
@@ -83,7 +78,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                 htmlFor="admin-username"
                 className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
               >
-                Username
+                Username / Email Admin
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -91,9 +86,10 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                   id="admin-username"
                   type="text"
                   required
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="sastraindonesia"
+                  placeholder="Masukkan username atau email admin"
                   className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#6B1724] focus:ring-2 focus:ring-[#6B1724]/20 outline-none"
                 />
               </div>
@@ -104,19 +100,29 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                 htmlFor="admin-password"
                 className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
               >
-                Password
+                Kata Sandi (Password)
               </label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   id="admin-password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#6B1724] focus:ring-2 focus:ring-[#6B1724]/20 outline-none font-mono"
+                  placeholder="Masukkan kata sandi rahasia"
+                  className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#6B1724] focus:ring-2 focus:ring-[#6B1724]/20 outline-none"
                 />
+                <button
+                  type="button"
+                  id="btn-toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                  title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -137,30 +143,14 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
             </button>
           </form>
 
-          {/* Quick Demo Helper */}
+          {/* Footer Back Button */}
           <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-left text-xs text-slate-600 mb-4">
-              <span className="font-bold text-slate-700 block mb-1">
-                Kredensial Default:
-              </span>
-              <div className="flex items-center justify-between font-mono text-[11px]">
-                <span>User: <strong>sastraindonesia</strong></span>
-                <span>Pass: <strong>sastrajaya</strong></span>
-              </div>
-              <button
-                type="button"
-                onClick={fillDefaultCredentials}
-                className="mt-2 text-[11px] text-[#6B1724] font-semibold hover:underline block"
-              >
-                Gunakan kredensial ini otomatis
-              </button>
-            </div>
-
             <button
+              id="btn-back-to-home"
               onClick={onBackToHome}
-              className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
+              className="text-xs text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             >
-              ← Kembali ke Halaman Mahasiswa
+              ← Kembali ke Halaman Utama Mahasiswa
             </button>
           </div>
 

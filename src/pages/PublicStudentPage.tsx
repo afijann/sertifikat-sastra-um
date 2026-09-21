@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventItem, CertificateConfig, Participant } from '../types';
 import { CertificateCanvas } from '../components/CertificateCanvas';
 import { downloadCertificatePdf } from '../utils/pdfGenerator';
+import { apiClient } from '../utils/apiClient';
 import confetti from 'canvas-confetti';
 import { 
   Award, 
@@ -51,16 +52,9 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const endpoint = initialEventSlug
-        ? `/api/public/event/${initialEventSlug}`
-        : `/api/public/active-event`;
-
-      const res = await fetch(endpoint);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal memuat kegiatan.');
-      }
+      const data = initialEventSlug
+        ? await apiClient.getEventBySlug(initialEventSlug)
+        : await apiClient.getActiveEvent();
 
       if (data.event) {
         setEvent(data.event);
@@ -94,19 +88,7 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
     setDuplicateMessage(null);
 
     try {
-      const res = await fetch('/api/public/certificates/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId: event.id,
-          fullName: cleanName,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Maaf, sertifikat belum dapat dibuat. Silakan coba kembali.');
-      }
+      const data = await apiClient.generateCertificate(event.id, cleanName);
 
       setParticipant(data.participant);
       if (data.templateConfig) {

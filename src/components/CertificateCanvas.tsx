@@ -40,6 +40,14 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const primaryColor = config.primaryColor || '#6B1724'; // Maroon
   const secondaryColor = config.secondaryColor || '#C5A059'; // Gold
 
+  const showLogos = config.showLogos !== false;
+  const showLogoUm = showLogos && config.showLogoUm !== false;
+  const showLogoFs = showLogos && config.showLogoFs !== false;
+  const hidePlaceholders = config.hideLogoPlaceholders === true;
+
+  const sigHeight = config.signatureSize || 70;
+  const stmpSize = config.stampSize || 75;
+
   return (
     <div
       id={id}
@@ -104,26 +112,32 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             style={{ borderColor: '#E2E8F0' }}
           >
             {/* Logo 1: Logo Universitas Negeri Malang */}
-            <div className="w-24 h-20 flex items-center justify-center shrink-0">
-              {config.logoUm ? (
-                <img 
-                  src={config.logoUm} 
-                  alt="Logo Universitas Negeri Malang" 
-                  className="max-h-16 max-w-full object-contain"
-                />
-              ) : (
-                <div 
-                  className="w-16 h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
-                  style={{ borderColor: primaryColor, color: primaryColor }}
-                >
-                  <Award className="w-6 h-6 mb-0.5 opacity-80" />
-                  <span className="text-[9px] font-bold leading-none tracking-tight">LOGO UM</span>
-                </div>
-              )}
-            </div>
+            {showLogoUm ? (
+              <div className="w-24 h-20 flex items-center justify-center shrink-0">
+                {config.logoUm ? (
+                  <img 
+                    src={config.logoUm} 
+                    alt="Logo Universitas Negeri Malang" 
+                    className="max-h-16 max-w-full object-contain"
+                  />
+                ) : !hidePlaceholders ? (
+                  <div 
+                    className="w-16 h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
+                    style={{ borderColor: primaryColor, color: primaryColor }}
+                  >
+                    <Award className="w-6 h-6 mb-0.5 opacity-80" />
+                    <span className="text-[9px] font-bold leading-none tracking-tight">LOGO UM</span>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16" />
+                )}
+              </div>
+            ) : (
+              showLogos && <div className="w-20 h-16 shrink-0" />
+            )}
 
             {/* Institutional Identity Heading */}
-            <div className="flex-1 text-center">
+            <div className="flex-1 text-center px-2">
               <h1 
                 className="text-base font-extrabold tracking-widest font-cinzel uppercase"
                 style={{ color: primaryColor }}
@@ -151,29 +165,35 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             </div>
 
             {/* Logo 2 & 3: Logo Fakultas Sastra & Dept Sastra Indonesia */}
-            <div className="w-24 h-20 flex items-center justify-center gap-2 shrink-0">
-              {config.logoFs ? (
-                <img 
-                  src={config.logoFs} 
-                  alt="Logo Fakultas Sastra UM" 
-                  className="max-h-16 max-w-full object-contain"
-                />
-              ) : config.logoDsi ? (
-                <img 
-                  src={config.logoDsi} 
-                  alt="Logo Departemen Sastra Indonesia" 
-                  className="max-h-16 max-w-full object-contain"
-                />
-              ) : (
-                <div 
-                  className="w-16 h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
-                  style={{ borderColor: secondaryColor, color: secondaryColor }}
-                >
-                  <ShieldCheck className="w-6 h-6 mb-0.5 opacity-80" />
-                  <span className="text-[9px] font-bold leading-none tracking-tight">FAKULTAS SASTRA</span>
-                </div>
-              )}
-            </div>
+            {showLogoFs ? (
+              <div className="w-24 h-20 flex items-center justify-center gap-2 shrink-0">
+                {config.logoFs ? (
+                  <img 
+                    src={config.logoFs} 
+                    alt="Logo Fakultas Sastra UM" 
+                    className="max-h-16 max-w-full object-contain"
+                  />
+                ) : config.logoDsi ? (
+                  <img 
+                    src={config.logoDsi} 
+                    alt="Logo Departemen Sastra Indonesia" 
+                    className="max-h-16 max-w-full object-contain"
+                  />
+                ) : !hidePlaceholders ? (
+                  <div 
+                    className="w-16 h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
+                    style={{ borderColor: secondaryColor, color: secondaryColor }}
+                  >
+                    <ShieldCheck className="w-6 h-6 mb-0.5 opacity-80" />
+                    <span className="text-[9px] font-bold leading-none tracking-tight">FAKULTAS SASTRA</span>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16" />
+                )}
+              </div>
+            ) : (
+              showLogos && <div className="w-20 h-16 shrink-0" />
+            )}
           </div>
 
           {/* Certificate Main Title */}
@@ -343,13 +363,21 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
               </p>
 
               {/* Signature Graphic Area with optional official stamp */}
-              <div className="relative h-14 w-44 mx-auto flex items-center justify-center my-0.5">
+              <div 
+                className="relative mx-auto flex items-center justify-center my-0.5"
+                style={{ height: `${sigHeight}px`, minHeight: '56px', width: '220px' }}
+              >
                 {/* Official Stamp behind/overlay signature */}
                 {config.stampImage && (
                   <img 
                     src={config.stampImage} 
                     alt="Stempel Resmi" 
-                    className="absolute -left-3 top-0 h-14 opacity-75 pointer-events-none select-none object-contain"
+                    style={{
+                      height: `${stmpSize}px`,
+                      width: `${stmpSize}px`,
+                      left: `-${Math.round(stmpSize * 0.25)}px`,
+                    }}
+                    className="absolute top-1/2 -translate-y-1/2 opacity-80 pointer-events-none select-none object-contain z-0"
                   />
                 )}
 
@@ -358,7 +386,8 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                   <img 
                     src={config.signatureImage} 
                     alt="Tanda Tangan Digital" 
-                    className="max-h-14 max-w-full object-contain relative z-10"
+                    style={{ maxHeight: `${sigHeight}px` }}
+                    className="max-w-full object-contain relative z-10"
                   />
                 ) : (
                   <div className="text-center">

@@ -4,6 +4,7 @@ import { PublicStudentPage } from './pages/PublicStudentPage';
 import { PublicVerificationPage } from './pages/PublicVerificationPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { AdminPanel } from './pages/admin/AdminPanel';
+import { apiClient } from './utils/apiClient';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'student' | 'verify' | 'admin-login' | 'admin-dashboard'>('student');
@@ -31,12 +32,9 @@ export default function App() {
 
   const fetchActiveEventTicker = async () => {
     try {
-      const res = await fetch('/api/public/active-event');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.event) {
-          setActiveEventTitle(data.event.title);
-        }
+      const data = await apiClient.getActiveEvent();
+      if (data.event) {
+        setActiveEventTitle(data.event.title);
       }
     } catch {
       // Non-blocking ticker fetch

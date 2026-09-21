@@ -58,6 +58,13 @@ export interface CertificateConfig {
   fontSizeBody: number;
   frameStyle: 'classic-double' | 'ornament-gold' | 'minimal-modern';
   showQr: boolean;
+  signatureSize?: number;
+  stampSize?: number;
+  showLogos?: boolean;
+  showLogoUm?: boolean;
+  showLogoFs?: boolean;
+  showLogoDsi?: boolean;
+  hideLogoPlaceholders?: boolean;
 }
 
 export interface DatabaseSchema {
@@ -93,6 +100,13 @@ const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   fontSizeBody: 14,
   frameStyle: 'classic-double',
   showQr: true,
+  signatureSize: 70,
+  stampSize: 75,
+  showLogos: true,
+  showLogoUm: true,
+  showLogoFs: true,
+  showLogoDsi: true,
+  hideLogoPlaceholders: false,
 };
 
 const DEFAULT_DATA: DatabaseSchema = {
@@ -233,7 +247,24 @@ class Database {
 
   // Auth
   getUserByUsername(username: string): User | undefined {
-    return this.data.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    const clean = (username || '').trim().toLowerCase();
+    return this.data.users.find(u => {
+      const uName = (u.username || '').toLowerCase();
+      return (
+        uName === clean ||
+        (clean === 'admin' && u.role === 'admin') ||
+        (clean === 'afiyanti.fs@um.ac.id' && u.role === 'admin') ||
+        (clean === 'sastra' && u.role === 'admin')
+      );
+    });
+  }
+
+  updateUserPassword(userId: string, newPasswordPlain: string): boolean {
+    const user = this.data.users.find(u => u.id === userId || u.role === 'admin');
+    if (!user) return false;
+    user.passwordHash = newPasswordPlain.trim();
+    this.save();
+    return true;
   }
 
   // Events

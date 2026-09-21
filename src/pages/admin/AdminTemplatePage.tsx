@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CertificateConfig, EventItem, Participant } from '../../types';
 import { CertificateCanvas } from '../../components/CertificateCanvas';
+import { apiClient } from '../../utils/apiClient';
 import { 
   Palette, 
   Upload, 
@@ -13,7 +14,13 @@ import {
   Stamp, 
   PenTool, 
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Sliders,
+  Eye,
+  EyeOff,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from 'lucide-react';
 
 interface AdminTemplatePageProps {
@@ -69,13 +76,8 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
 
   const loadEvents = async () => {
     try {
-      const res = await fetch('/api/admin/events', {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data);
-      }
+      const data = await apiClient.getAllEvents(adminToken);
+      setEvents(data);
     } catch (err) {
       console.error(err);
     }
@@ -85,20 +87,8 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const endpoint = key === 'global'
-        ? '/api/admin/template'
-        : `/api/admin/template?eventId=${key}`;
-
-      const res = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setConfig(data);
-      } else {
-        setError('Gagal memuat template.');
-      }
+      const data = await apiClient.getTemplateConfig(adminToken, key);
+      setConfig(data);
     } catch (err) {
       console.error(err);
       setError('Gagal memuat template.');
@@ -116,24 +106,9 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     setError(null);
 
     try {
-      const res = await fetch('/api/admin/template', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify({
-          key: selectedKey,
-          config,
-        }),
-      });
-
-      if (res.ok) {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        throw new Error('Gagal menyimpan konfigurasi.');
-      }
+      await apiClient.saveTemplateConfig(adminToken, selectedKey, config);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message || 'Gagal menyimpan.');
     } finally {
@@ -171,6 +146,19 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
       setConfig({
         ...config,
         [field]: '',
+      });
+    }
+  };
+
+  const handleClearAllLogos = () => {
+    if (!config) return;
+    if (window.confirm('Hapus semua file logo dan sembunyikan kotak placeholder otomatis?')) {
+      setConfig({
+        ...config,
+        logoUm: '',
+        logoFs: '',
+        logoDsi: '',
+        hideLogoPlaceholders: true,
       });
     }
   };
@@ -232,21 +220,71 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
           
           {/* SECTION 1: UPLOAD LOGO RESMI INSTITUSI */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
-            <div>
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#6B1724]" />
-                <span>1. Upload Logo Resmi Institusi</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Sesuai panduan Departemen Sastra Indonesia, tidak menggunakan logo buatan AI. Silakan unggah file logo resmi berformat PNG/JPG. Jika belum diunggah, sistem menampilkan placeholder akademik yang rapi.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#6B1724]" />
+                  <span>1. Pengaturan & Upload Logo Resmi Institusi</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Unggah file logo resmi berformat PNG/JPG transparan. Anda dapat menghapus logo sewaktu-waktu atau menyembunyikan logo agar sertifikat hanya menampilkan teks institusi.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  id="btn-clear-all-logos"
+                  onClick={handleClearAllLogos}
+                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus Semua Logo Otomatis</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Visibility Controls for Logos */}
+            <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  id="chk-show-logos"
+                  checked={config.showLogos !== false}
+                  onChange={(e) => setConfig({ ...config, showLogos: e.target.checked })}
+                  className="rounded border-slate-300 text-[#6B1724] focus:ring-[#6B1724]"
+                />
+                <span>Tampilkan Header Logo di Sertifikat</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600">
+                <input
+                  type="checkbox"
+                  id="chk-hide-logo-placeholders"
+                  checked={config.hideLogoPlaceholders === true}
+                  onChange={(e) => setConfig({ ...config, hideLogoPlaceholders: e.target.checked })}
+                  className="rounded border-slate-300 text-[#6B1724] focus:ring-[#6B1724]"
+                />
+                <span>Sembunyikan Kotak Placeholder jika logo kosong</span>
+              </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
               
               {/* LOGO 1: UM */}
               <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-between text-center bg-slate-50/50">
-                <span className="text-xs font-bold text-slate-700 mb-2">Logo Universitas Negeri Malang</span>
+                <div className="w-full flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-700">Logo Universitas Negeri Malang</span>
+                  <label className="text-[10px] text-slate-500 flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.showLogoUm !== false}
+                      onChange={(e) => setConfig({ ...config, showLogoUm: e.target.checked })}
+                      className="rounded border-slate-300 text-[#6B1724] focus:ring-[#6B1724] w-3 h-3"
+                    />
+                    <span>Aktif</span>
+                  </label>
+                </div>
                 
                 <div className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white">
                   {config.logoUm ? (
@@ -255,7 +293,7 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                     <div className="text-center p-2">
                       <Award className="w-8 h-8 text-slate-300 mx-auto mb-1" />
                       <span className="text-[10px] text-slate-400 font-semibold block leading-tight">
-                        [Placeholder Logo UM]
+                        {config.hideLogoPlaceholders ? '(Logo Disembunyikan)' : '[Placeholder Logo UM]'}
                       </span>
                     </div>
                   )}
@@ -274,10 +312,13 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   {config.logoUm && (
                     <button
                       type="button"
+                      id="btn-remove-logo-um"
                       onClick={() => handleRemoveImage('logoUm')}
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                      className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
+                      title="Hapus Logo UM"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
                     </button>
                   )}
                 </div>
@@ -285,7 +326,18 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
 
               {/* LOGO 2: FAKULTAS SASTRA */}
               <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-between text-center bg-slate-50/50">
-                <span className="text-xs font-bold text-slate-700 mb-2">Logo Fakultas Sastra</span>
+                <div className="w-full flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-700">Logo Fakultas Sastra</span>
+                  <label className="text-[10px] text-slate-500 flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.showLogoFs !== false}
+                      onChange={(e) => setConfig({ ...config, showLogoFs: e.target.checked })}
+                      className="rounded border-slate-300 text-[#6B1724] focus:ring-[#6B1724] w-3 h-3"
+                    />
+                    <span>Aktif</span>
+                  </label>
+                </div>
                 
                 <div className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white">
                   {config.logoFs ? (
@@ -294,7 +346,7 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                     <div className="text-center p-2">
                       <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-1" />
                       <span className="text-[10px] text-slate-400 font-semibold block leading-tight">
-                        [Placeholder Logo Fakultas Sastra]
+                        {config.hideLogoPlaceholders ? '(Logo Disembunyikan)' : '[Placeholder Logo FS]'}
                       </span>
                     </div>
                   )}
@@ -313,10 +365,13 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   {config.logoFs && (
                     <button
                       type="button"
+                      id="btn-remove-logo-fs"
                       onClick={() => handleRemoveImage('logoFs')}
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                      className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
+                      title="Hapus Logo FS"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
                     </button>
                   )}
                 </div>
@@ -333,7 +388,7 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                     <div className="text-center p-2">
                       <Sparkles className="w-8 h-8 text-slate-300 mx-auto mb-1" />
                       <span className="text-[10px] text-slate-400 font-semibold block leading-tight">
-                        [Placeholder Lambang DSI]
+                        {config.hideLogoPlaceholders ? '(Lambang Kosong)' : '[Lambang Dept Sastra]'}
                       </span>
                     </div>
                   )}
@@ -352,10 +407,13 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   {config.logoDsi && (
                     <button
                       type="button"
+                      id="btn-remove-logo-dsi"
                       onClick={() => handleRemoveImage('logoDsi')}
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                      className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
+                      title="Hapus Lambang DSI"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
                     </button>
                   )}
                 </div>
@@ -365,26 +423,36 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
           </div>
 
           {/* SECTION 2: TANDA TANGAN & STEMPEL RESMI */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
             <div>
               <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel flex items-center gap-2">
                 <PenTool className="w-4 h-4 text-[#6B1724]" />
                 <span>2. Tanda Tangan & Stempel Resmi</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Format PNG transparan dianjurkan untuk tanda tangan digital dan stempel dinas agar tampak alami di lembar sertifikat.
+                Format PNG transparan dianjurkan. Gunakan slider di bawah untuk memperbesar atau memperkecil ukuran tanda tangan dan stempel sesuai kebutuhan visual sertifikat.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
               
-              {/* Tanda Tangan Digital */}
-              <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-between text-center bg-slate-50/50">
-                <span className="text-xs font-bold text-slate-700 mb-2">Tanda Tangan Digital (PNG Transparan)</span>
+              {/* Tanda Tangan Digital Card */}
+              <div className="border border-slate-200 rounded-xl p-5 flex flex-col justify-between bg-slate-50/50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Tanda Tangan Digital (PNG)</span>
+                  <span className="text-[11px] font-semibold text-[#6B1724] bg-maroon-50 px-2 py-0.5 rounded border border-[#6B1724]/20">
+                    Tinggi: {config.signatureSize || 70} px
+                  </span>
+                </div>
                 
-                <div className="w-full h-24 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white">
+                <div className="w-full h-32 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 bg-white overflow-hidden">
                   {config.signatureImage ? (
-                    <img src={config.signatureImage} alt="Tanda Tangan" className="max-h-full max-w-full object-contain" />
+                    <img 
+                      src={config.signatureImage} 
+                      alt="Tanda Tangan" 
+                      style={{ maxHeight: `${Math.min(config.signatureSize || 70, 110)}px` }}
+                      className="max-w-full object-contain transition-all" 
+                    />
                   ) : (
                     <span className="text-xs text-slate-400 italic">
                       Belum diunggah (menggunakan garis tanda tangan standar)
@@ -392,35 +460,97 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 w-full">
-                  <label className="flex-1 py-1.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
+                {/* Slider Kontrol Ukuran TTD */}
+                <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-[#6B1724]" />
+                      <span>Atur Skala / Perbesar TTD:</span>
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">{config.signatureSize || 70} px</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <ZoomOut className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <input
+                      type="range"
+                      id="range-signature-size"
+                      min="40"
+                      max="140"
+                      step="5"
+                      value={config.signatureSize || 70}
+                      onChange={(e) => setConfig({ ...config, signatureSize: Number(e.target.value) })}
+                      className="w-full accent-[#6B1724] cursor-pointer"
+                    />
+                    <ZoomIn className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex items-center gap-1.5 pt-1 text-[11px]">
+                    <span className="text-slate-400 mr-1 text-[10px]">Preset:</span>
+                    {[
+                      { label: 'Kecil', size: 50 },
+                      { label: 'Standar', size: 70 },
+                      { label: 'Besar', size: 95 },
+                      { label: 'Ekstra', size: 120 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.size}
+                        type="button"
+                        onClick={() => setConfig({ ...config, signatureSize: preset.size })}
+                        className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                          (config.signatureSize || 70) === preset.size
+                            ? 'bg-[#6B1724] text-white border-[#6B1724]'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full pt-1">
+                  <label className="flex-1 py-2 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={(e) => handleFileUpload('signatureImage', e)}
                     />
-                    <span>{config.signatureImage ? 'Ganti TTD' : 'Upload File TTD (PNG)'}</span>
+                    <span>{config.signatureImage ? 'Ganti File TTD' : 'Upload File TTD (PNG)'}</span>
                   </label>
                   {config.signatureImage && (
                     <button
                       type="button"
+                      id="btn-remove-signature"
                       onClick={() => handleRemoveImage('signatureImage')}
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                      className="px-3 py-2 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md flex items-center gap-1.5 font-medium cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
+                      <span>Hapus</span>
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Stempel Dinas */}
-              <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-between text-center bg-slate-50/50">
-                <span className="text-xs font-bold text-slate-700 mb-2">Stempel Resmi Fakultas / Departemen</span>
+              {/* Stempel Dinas Card */}
+              <div className="border border-slate-200 rounded-xl p-5 flex flex-col justify-between bg-slate-50/50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Stempel Resmi Fakultas / Departemen</span>
+                  <span className="text-[11px] font-semibold text-[#6B1724] bg-maroon-50 px-2 py-0.5 rounded border border-[#6B1724]/20">
+                    Diameter: {config.stampSize || 75} px
+                  </span>
+                </div>
                 
-                <div className="w-full h-24 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white">
+                <div className="w-full h-32 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 bg-white overflow-hidden">
                   {config.stampImage ? (
-                    <img src={config.stampImage} alt="Stempel" className="max-h-full max-w-full object-contain opacity-80" />
+                    <img 
+                      src={config.stampImage} 
+                      alt="Stempel" 
+                      style={{ maxHeight: `${Math.min(config.stampSize || 75, 110)}px` }}
+                      className="max-w-full object-contain opacity-85 transition-all" 
+                    />
                   ) : (
                     <span className="text-xs text-slate-400 italic">
                       Opsional (stempel basah transparan)
@@ -428,8 +558,58 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 w-full">
-                  <label className="flex-1 py-1.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
+                {/* Slider Kontrol Ukuran Stempel */}
+                <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-[#6B1724]" />
+                      <span>Atur Skala / Perbesar Stempel:</span>
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">{config.stampSize || 75} px</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <ZoomOut className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <input
+                      type="range"
+                      id="range-stamp-size"
+                      min="40"
+                      max="140"
+                      step="5"
+                      value={config.stampSize || 75}
+                      onChange={(e) => setConfig({ ...config, stampSize: Number(e.target.value) })}
+                      className="w-full accent-[#6B1724] cursor-pointer"
+                    />
+                    <ZoomIn className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex items-center gap-1.5 pt-1 text-[11px]">
+                    <span className="text-slate-400 mr-1 text-[10px]">Preset:</span>
+                    {[
+                      { label: 'Kecil', size: 55 },
+                      { label: 'Standar', size: 75 },
+                      { label: 'Besar', size: 100 },
+                      { label: 'Ekstra', size: 125 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.size}
+                        type="button"
+                        onClick={() => setConfig({ ...config, stampSize: preset.size })}
+                        className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                          (config.stampSize || 75) === preset.size
+                            ? 'bg-[#6B1724] text-white border-[#6B1724]'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full pt-1">
+                  <label className="flex-1 py-2 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
                     <input
                       type="file"
                       accept="image/*"
@@ -441,10 +621,12 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   {config.stampImage && (
                     <button
                       type="button"
+                      id="btn-remove-stamp"
                       onClick={() => handleRemoveImage('stampImage')}
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                      className="px-3 py-2 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md flex items-center gap-1.5 font-medium cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
+                      <span>Hapus</span>
                     </button>
                   )}
                 </div>

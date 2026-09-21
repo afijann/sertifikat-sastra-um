@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventItem, CertificateConfig, Participant } from '../types';
 import { CertificateCanvas } from '../components/CertificateCanvas';
 import { downloadCertificatePdf } from '../utils/pdfGenerator';
+import { apiClient } from '../utils/apiClient';
 import { 
   ShieldCheck, 
   ShieldAlert, 
@@ -53,11 +54,9 @@ export const PublicVerificationPage: React.FC<PublicVerificationPageProps> = ({
     setShowPreview(false);
 
     try {
-      const encoded = encodeURIComponent(cleanNumber);
-      const res = await fetch(`/api/public/verify/${encoded}`);
-      const data = await res.json();
+      const data = await apiClient.verifyCertificate(cleanNumber);
 
-      if (res.ok && data.valid) {
+      if (data.valid) {
         setResult({
           valid: true,
           participant: data.participant,

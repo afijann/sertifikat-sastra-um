@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventItem, Participant, CertificateConfig } from '../../types';
 import { CertificateCanvas } from '../../components/CertificateCanvas';
 import { downloadCertificatePdf } from '../../utils/pdfGenerator';
+import { apiClient } from '../../utils/apiClient';
 import { 
   Users, 
   Search, 
@@ -50,21 +51,13 @@ export const AdminParticipantsPage: React.FC<AdminParticipantsPageProps> = ({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [eventsRes, partsRes] = await Promise.all([
-        fetch('/api/admin/events', {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
-        fetch(`/api/admin/participants${selectedEventId ? `?eventId=${selectedEventId}` : ''}`, {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
+      const [eventsData, partsData] = await Promise.all([
+        apiClient.getAllEvents(adminToken),
+        apiClient.getParticipants(adminToken, selectedEventId),
       ]);
 
-      if (eventsRes.ok && partsRes.ok) {
-        const eventsData = await eventsRes.json();
-        const partsData = await partsRes.json();
-        setEvents(eventsData);
-        setParticipants(partsData);
-      }
+      setEvents(eventsData);
+      setParticipants(partsData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -92,10 +85,7 @@ export const AdminParticipantsPage: React.FC<AdminParticipantsPageProps> = ({
       } as EventItem;
 
       // Get template config
-      const res = await fetch(`/api/admin/template?eventId=${participant.eventId}`, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      const template = res.ok ? await res.json() : null;
+      const template = await apiClient.getTemplateConfig(adminToken, participant.eventId);
 
       setPreviewParticipant(participant);
       setPreviewEvent(event);
@@ -110,20 +100,12 @@ export const AdminParticipantsPage: React.FC<AdminParticipantsPageProps> = ({
     setRegeneratingId(participantId);
     setRegenerateSuccess(null);
     try {
-      const res = await fetch(`/api/admin/participants/${participantId}/regenerate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setRegenerateSuccess(`Sertifikat untuk ${data.participant.fullName} berhasil diregenerasi tanpa mengubah nomor sertifikat.`);
-        // Reload list
-        loadData();
-      } else {
-        alert(data.error || 'Gagal meregenerasi.');
-      }
-    } catch (err) {
+      const updated = await apiClient.regenerateCertificate(adminToken, participantId);
+      setRegenerateSuccess(`Sertifikat untuk ${updated.fullName} berhasil diregenerasi.`);
+      loadData();
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || 'Gagal meregenerasi.');
     } finally {
       setRegeneratingId(null);
     }
@@ -134,13 +116,8 @@ export const AdminParticipantsPage: React.FC<AdminParticipantsPageProps> = ({
       return;
     }
     try {
-      const res = await fetch(`/api/admin/participants/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        loadData();
-      }
+      await apiClient.deleteParticipant(adminToken, id);
+      loadData();
     } catch (err) {
       console.error(err);
     }
@@ -165,8 +142,7 @@ export const AdminParticipantsPage: React.FC<AdminParticipantsPageProps> = ({
   };
 
   const exportCsv = () => {
-    const url = `/api/admin/export/csv${selectedEventId ? `?eventId=${selectedEventId}` : ''}`;
-    window.open(url, '_blank');
+    apiClient.downloadCsv(adminToken, selectedEventId);
   };
 
   const filteredParticipants = participants.filter(p =>

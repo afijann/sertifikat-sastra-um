@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EventItem } from '../../types';
+import { apiClient } from '../../utils/apiClient';
 import { 
   Plus, 
   Search, 
@@ -69,13 +70,8 @@ export const AdminEventsPage: React.FC<AdminEventsPageProps> = ({
   const loadEvents = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/events', {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data);
-      }
+      const data = await apiClient.getAllEvents(adminToken);
+      setEvents(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -123,30 +119,17 @@ export const AdminEventsPage: React.FC<AdminEventsPageProps> = ({
     setFormError(null);
 
     try {
-      const url = modalMode === 'create'
-        ? '/api/admin/events'
-        : `/api/admin/events/${currentEventId}`;
-      const method = modalMode === 'create' ? 'POST' : 'PUT';
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal menyimpan kegiatan.');
+      if (modalMode === 'create') {
+        await apiClient.createEvent(adminToken, formData);
+      } else if (currentEventId) {
+        await apiClient.updateEvent(adminToken, currentEventId, formData);
       }
 
       setIsModalOpen(false);
       loadEvents();
     } catch (err: any) {
       console.error(err);
-      setFormError(err.message || 'Terjadi kesalahan sistem.');
+      setFormError(err.message || 'Terjadi kesalahan saat menyimpan.');
     } finally {
       setSaving(false);
     }
@@ -154,13 +137,8 @@ export const AdminEventsPage: React.FC<AdminEventsPageProps> = ({
 
   const handleToggleStatus = async (eventId: string) => {
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/toggle-status`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        loadEvents();
-      }
+      await apiClient.toggleEventStatus(adminToken, eventId);
+      loadEvents();
     } catch (err) {
       console.error(err);
     }
@@ -171,13 +149,8 @@ export const AdminEventsPage: React.FC<AdminEventsPageProps> = ({
       return;
     }
     try {
-      const res = await fetch(`/api/admin/events/${eventId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-      if (res.ok) {
-        loadEvents();
-      }
+      await apiClient.deleteEvent(adminToken, eventId);
+      loadEvents();
     } catch (err) {
       console.error(err);
     }
