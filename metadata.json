@@ -1,0 +1,6 @@
+{
+  "name": "Generator Sertifikat Sastra Indonesia UM",
+  "description": "Aplikasi generator sertifikat kegiatan akademik dan non-akademik Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang dengan verifikasi QR Code dan manajemen kegiatan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
