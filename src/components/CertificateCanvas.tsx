@@ -47,6 +47,9 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
 
   const sigHeight = config.signatureSize || 70;
   const stmpSize = config.stampSize || 75;
+  const logoHeight = config.logoSize || 70;
+  const logoContainerWidth = Math.max(90, Math.round(logoHeight * 1.35));
+  const logoContainerHeight = Math.max(72, Math.round(logoHeight * 1.15));
 
   return (
     <div
@@ -113,27 +116,31 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
           >
             {/* Logo 1: Logo Universitas Negeri Malang */}
             {showLogoUm ? (
-              <div className="w-24 h-20 flex items-center justify-center shrink-0">
+              <div 
+                style={{ width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} 
+                className="flex items-center justify-center shrink-0"
+              >
                 {config.logoUm ? (
                   <img 
                     src={config.logoUm} 
                     alt="Logo Universitas Negeri Malang" 
-                    className="max-h-16 max-w-full object-contain"
+                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${logoContainerWidth}px` }}
+                    className="object-contain"
                   />
                 ) : !hidePlaceholders ? (
                   <div 
-                    className="w-16 h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
-                    style={{ borderColor: primaryColor, color: primaryColor }}
+                    style={{ width: `${Math.min(76, logoHeight)}px`, height: `${Math.min(76, logoHeight)}px`, borderColor: primaryColor, color: primaryColor }}
+                    className="rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
                   >
                     <Award className="w-6 h-6 mb-0.5 opacity-80" />
                     <span className="text-[9px] font-bold leading-none tracking-tight">LOGO UM</span>
                   </div>
                 ) : (
-                  <div className="w-16 h-16" />
+                  <div style={{ width: `${logoHeight}px`, height: `${logoHeight}px` }} />
                 )}
               </div>
             ) : (
-              showLogos && <div className="w-20 h-16 shrink-0" />
+              showLogos && <div style={{ width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
             )}
 
             {/* Institutional Identity Heading */}
@@ -166,33 +173,40 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
 
             {/* Logo 2 & 3: Logo Fakultas Sastra & Dept Sastra Indonesia */}
             {showLogoFs ? (
-              <div className="w-24 h-20 flex items-center justify-center gap-2 shrink-0">
-                {config.logoFs ? (
+              <div 
+                style={{ minWidth: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} 
+                className="flex items-center justify-center gap-2 shrink-0"
+              >
+                {config.logoFs && (
                   <img 
                     src={config.logoFs} 
                     alt="Logo Fakultas Sastra UM" 
-                    className="max-h-16 max-w-full object-contain"
+                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoContainerWidth * 0.95)}px` }}
+                    className="object-contain"
                   />
-                ) : config.logoDsi ? (
+                )}
+                {config.logoDsi && (
                   <img 
                     src={config.logoDsi} 
                     alt="Logo Departemen Sastra Indonesia" 
-                    className="max-h-16 max-w-full object-contain"
+                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoContainerWidth * 0.95)}px` }}
+                    className="object-contain"
                   />
-                ) : !hidePlaceholders ? (
+                )}
+                {!config.logoFs && !config.logoDsi && (!hidePlaceholders ? (
                   <div 
-                    className="w-16 h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
-                    style={{ borderColor: secondaryColor, color: secondaryColor }}
+                    style={{ width: `${Math.min(76, logoHeight)}px`, height: `${Math.min(76, logoHeight)}px`, borderColor: secondaryColor, color: secondaryColor }}
+                    className="rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
                   >
                     <ShieldCheck className="w-6 h-6 mb-0.5 opacity-80" />
                     <span className="text-[9px] font-bold leading-none tracking-tight">FAKULTAS SASTRA</span>
                   </div>
                 ) : (
-                  <div className="w-16 h-16" />
-                )}
+                  <div style={{ width: `${logoHeight}px`, height: `${logoHeight}px` }} />
+                ))}
               </div>
             ) : (
-              showLogos && <div className="w-20 h-16 shrink-0" />
+              showLogos && <div style={{ width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
             )}
           </div>
 

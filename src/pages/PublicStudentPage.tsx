@@ -396,7 +396,7 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
                     type="text"
                     required
                     autoFocus
-                    placeholder="Contoh: Afiyanti Nurul Hidayah, S.Pd."
+                    placeholder="Contoh: Siti Rahmawati, S.Pd."
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full px-4 py-3.5 text-base sm:text-lg rounded-lg border-2 border-slate-300 focus:border-[#6B1724] focus:ring-2 focus:ring-[#6B1724]/20 outline-none transition-all placeholder:text-slate-400 font-serif font-medium bg-slate-50/50 focus:bg-white"

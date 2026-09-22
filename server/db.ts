@@ -60,6 +60,7 @@ export interface CertificateConfig {
   showQr: boolean;
   signatureSize?: number;
   stampSize?: number;
+  logoSize?: number;
   showLogos?: boolean;
   showLogoUm?: boolean;
   showLogoFs?: boolean;
@@ -102,6 +103,7 @@ const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   showQr: true,
   signatureSize: 70,
   stampSize: 75,
+  logoSize: 70,
   showLogos: true,
   showLogoUm: true,
   showLogoFs: true,
@@ -171,7 +173,7 @@ const DEFAULT_DATA: DatabaseSchema = {
     {
       id: 'part-1',
       eventId: 'evt-ws-pkm-2026',
-      fullName: 'Afiyanti Nurul Hidayah',
+      fullName: 'Siti Rahmawati',
       certificateNumber: 'WS-PKM/DSI/FS-UM/2026/001',
       createdAt: '2026-09-21T09:15:20.000Z',
       verificationCode: 'VER-9A7B1C',
@@ -431,13 +433,20 @@ class Database {
   }
 
   getEventTemplateConfig(eventId: string): CertificateConfig {
-    if (this.data.templateConfigs[eventId]) {
-      return this.data.templateConfigs[eventId];
+    const globalCfg = this.getGlobalTemplateConfig();
+    const eventCfg = this.data.templateConfigs[eventId];
+    if (eventCfg) {
+      return {
+        ...globalCfg,
+        ...eventCfg,
+        id: eventId,
+        eventId,
+      };
     }
-    return this.getGlobalTemplateConfig();
+    return globalCfg;
   }
 
-  updateTemplateConfig(key: string, updates: Partial<CertificateConfig>): CertificateConfig {
+  updateTemplateConfig(key: string, updates: Partial<CertificateConfig>, applyToAll: boolean = true): CertificateConfig {
     const current = this.data.templateConfigs[key] || (key === 'global' ? DEFAULT_GLOBAL_CONFIG : this.getGlobalTemplateConfig());
     const updated: CertificateConfig = {
       ...current,
@@ -445,6 +454,27 @@ class Database {
       id: key,
     };
     this.data.templateConfigs[key] = updated;
+
+    // If saving global or applyToAll is requested, propagate visual & institutional designs to all event configs
+    if (key === 'global' || applyToAll) {
+      this.data.templateConfigs['global'] = {
+        ...this.getGlobalTemplateConfig(),
+        ...updates,
+        id: 'global',
+      };
+
+      for (const evId of Object.keys(this.data.templateConfigs)) {
+        if (evId !== 'global') {
+          this.data.templateConfigs[evId] = {
+            ...this.data.templateConfigs[evId],
+            ...updates,
+            id: evId,
+            eventId: evId,
+          };
+        }
+      }
+    }
+
     this.save();
     return updated;
   }

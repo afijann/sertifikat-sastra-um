@@ -52,6 +52,7 @@ export interface CertificateConfig {
   showQr: boolean;
   signatureSize?: number;
   stampSize?: number;
+  logoSize?: number;
   showLogos?: boolean;
   showLogoUm?: boolean;
   showLogoFs?: boolean;

@@ -308,7 +308,12 @@ export const apiClient = {
   },
 
   // ADMIN: SAVE TEMPLATE CONFIG
-  async saveTemplateConfig(adminToken: string, eventIdOrKey: string, config: CertificateConfig): Promise<CertificateConfig> {
+  async saveTemplateConfig(
+    adminToken: string,
+    eventIdOrKey: string,
+    config: CertificateConfig,
+    applyToAll: boolean = true
+  ): Promise<CertificateConfig> {
     const res = await safeFetchJson<{ templateConfig: CertificateConfig }>('/api/admin/template', {
       method: 'PUT',
       headers: {
@@ -319,14 +324,18 @@ export const apiClient = {
         key: eventIdOrKey,
         eventId: eventIdOrKey !== 'global' ? eventIdOrKey : undefined,
         config: { ...config, id: eventIdOrKey, eventId: eventIdOrKey !== 'global' ? eventIdOrKey : undefined },
+        applyToAll,
       }),
     });
 
-    const localSaved = localDb.saveTemplateConfig({
-      ...config,
-      id: eventIdOrKey,
-      eventId: eventIdOrKey !== 'global' ? eventIdOrKey : undefined,
-    });
+    const localSaved = localDb.saveTemplateConfig(
+      {
+        ...config,
+        id: eventIdOrKey,
+        eventId: eventIdOrKey !== 'global' ? eventIdOrKey : undefined,
+      },
+      applyToAll
+    );
     if (res.success && res.data?.templateConfig) {
       return res.data.templateConfig;
     }

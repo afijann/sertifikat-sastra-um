@@ -39,12 +39,13 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [applyToAll, setApplyToAll] = useState(true);
 
   // Demo participant for live preview
   const demoParticipant: Participant = {
     id: 'demo-p',
     eventId: selectedKey,
-    fullName: 'Afiyanti Nurul Hidayah, S.Pd.',
+    fullName: 'Siti Rahmawati, S.Pd.',
     certificateNumber: 'WS-PKM/DSI/FS-UM/2026/001',
     createdAt: new Date().toISOString(),
     verificationCode: 'VER-SAMPLE',
@@ -97,8 +98,8 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!config) return;
 
     setSaving(true);
@@ -106,11 +107,14 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     setError(null);
 
     try {
-      await apiClient.saveTemplateConfig(adminToken, selectedKey, config);
+      const saved = await apiClient.saveTemplateConfig(adminToken, selectedKey, config, applyToAll);
+      if (saved) {
+        setConfig(saved);
+      }
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
-      setError(err.message || 'Gagal menyimpan.');
+      setError(err.message || 'Gagal menyimpan template.');
     } finally {
       setSaving(false);
     }
@@ -177,23 +181,37 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
           </p>
         </div>
 
-        {/* Switcher: Global Default vs Specific Event */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-600">Pilih Konfigurasi:</span>
-          <select
-            value={selectedKey}
-            onChange={(e) => setSelectedKey(e.target.value)}
-            className="px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white font-semibold text-slate-800 outline-none focus:border-[#6B1724]"
-          >
-            <option value="global">★ Template Default Departemen</option>
-            <optgroup label="Khusus Kegiatan:">
-              {events.map((evt) => (
-                <option key={evt.id} value={evt.id}>
-                  {evt.title}
-                </option>
-              ))}
-            </optgroup>
-          </select>
+        {/* Switcher & Quick Save */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-600">Pilih Konfigurasi:</span>
+            <select
+              value={selectedKey}
+              onChange={(e) => setSelectedKey(e.target.value)}
+              className="px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white font-semibold text-slate-800 outline-none focus:border-[#6B1724]"
+            >
+              <option value="global">🌐 Template Global Departemen (Otomatis ke Seluruh Kegiatan)</option>
+              <optgroup label="Atau Khusus Kegiatan Tertentu:">
+                {events.map((evt) => (
+                  <option key={evt.id} value={evt.id}>
+                    {evt.title}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
+          {config && (
+            <button
+              type="button"
+              onClick={() => handleSave()}
+              disabled={saving}
+              className="px-4 py-2 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold text-xs rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+            >
+              <Save className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -267,6 +285,68 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                 />
                 <span>Sembunyikan Kotak Placeholder jika logo kosong</span>
               </label>
+            </div>
+
+            {/* Logo Size / Scale Slider (Fitur Perbesar Logo) */}
+            <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <Sliders className="w-4 h-4 text-[#6B1724]" />
+                  <span className="font-bold text-slate-800">Perbesar / Skala Ukuran Logo:</span>
+                  <span className="text-slate-500 text-[11px]">(Atur tinggi dan proporsi logo resmi institusi)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-[#6B1724] bg-white px-2.5 py-1 rounded-md border border-amber-300 shadow-2xs">
+                    {config.logoSize || 70} px
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, logoSize: 70 })}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ZoomOut className="w-4 h-4 text-slate-400 shrink-0" />
+                <input
+                  type="range"
+                  id="range-logo-size"
+                  min="45"
+                  max="130"
+                  step="5"
+                  value={config.logoSize || 70}
+                  onChange={(e) => setConfig({ ...config, logoSize: Number(e.target.value) })}
+                  className="w-full accent-[#6B1724] cursor-pointer"
+                />
+                <ZoomIn className="w-4 h-4 text-slate-400 shrink-0" />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                <span className="text-slate-500 mr-1 font-medium">Pilihan Cepat:</span>
+                {[
+                  { label: 'Standar (65px)', size: 65 },
+                  { label: 'Sedang (75px)', size: 75 },
+                  { label: 'Besar (90px)', size: 90 },
+                  { label: 'Ekstra Besar (110px)', size: 110 },
+                  { label: 'Maksimal (125px)', size: 125 },
+                ].map((preset) => (
+                  <button
+                    key={preset.size}
+                    type="button"
+                    onClick={() => setConfig({ ...config, logoSize: preset.size })}
+                    className={`px-2.5 py-1 rounded-md border transition-colors cursor-pointer font-medium ${
+                      (config.logoSize || 70) === preset.size
+                        ? 'bg-[#6B1724] text-white border-[#6B1724] shadow-2xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
@@ -773,18 +853,31 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
             </div>
           </div>
 
-          {/* SAVE BUTTON */}
-          <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200">
-            <span className="text-xs text-slate-500">
-              Perubahan template akan langsung tercermin pada preview sertifikat di bawah ini.
-            </span>
+          {/* SAVE BUTTON & SYNC OPTIONS */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={applyToAll}
+                  onChange={(e) => setApplyToAll(e.target.checked)}
+                  className="rounded border-slate-300 text-[#6B1724] focus:ring-[#6B1724] w-4 h-4"
+                />
+                <span className="text-xs font-bold text-slate-800">
+                  Terapkan desain template ini ke seluruh kegiatan aktif (termasuk Workshop PKM)
+                </span>
+              </label>
+              <p className="text-[11px] text-slate-500 pl-6">
+                Memastikan logo baru, perbesaran ukuran logo, tanda tangan, stempel, dan format langsung tampil di halaman publik mahasiswa.
+              </p>
+            </div>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold text-xs rounded-lg shadow flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-6 py-3 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
             >
               <Save className="w-4 h-4 text-[#C5A059]" />
-              <span>{saving ? 'Menyimpan...' : 'SIMPAN PENGATURAN TEMPLATE'}</span>
+              <span>{saving ? 'Menyimpan Template...' : 'SIMPAN PENGATURAN TEMPLATE'}</span>
             </button>
           </div>
 

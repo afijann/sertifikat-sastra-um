@@ -34,6 +34,7 @@ export const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   showQr: true,
   signatureSize: 70,
   stampSize: 75,
+  logoSize: 70,
   showLogos: true,
   showLogoUm: true,
   showLogoFs: true,
@@ -93,7 +94,7 @@ const DEFAULT_PARTICIPANTS: Participant[] = [
   {
     id: 'part-1',
     eventId: 'evt-ws-pkm-2026',
-    fullName: 'Afiyanti Nurul Hidayah',
+    fullName: 'Siti Rahmawati',
     certificateNumber: 'WS-PKM/DSI/FS-UM/2026/001',
     createdAt: '2026-09-21T09:15:20.000Z',
     verificationCode: 'VER-9A7B1C',
@@ -465,16 +466,42 @@ class LocalDatabase {
   // TEMPLATES
   public getTemplateConfig(eventId?: string): CertificateConfig {
     const state = this.getState();
+    const globalCfg = state.templateConfigs.global || DEFAULT_GLOBAL_CONFIG;
     if (eventId && state.templateConfigs[eventId]) {
-      return state.templateConfigs[eventId];
+      return {
+        ...globalCfg,
+        ...state.templateConfigs[eventId],
+        id: eventId,
+        eventId,
+      };
     }
-    return state.templateConfigs.global || DEFAULT_GLOBAL_CONFIG;
+    return globalCfg;
   }
 
-  public saveTemplateConfig(config: CertificateConfig): CertificateConfig {
+  public saveTemplateConfig(config: CertificateConfig, applyToAll: boolean = true): CertificateConfig {
     const state = this.getState();
     const key = config.eventId || config.id || 'global';
     state.templateConfigs[key] = { ...config };
+
+    if (key === 'global' || applyToAll) {
+      state.templateConfigs.global = {
+        ...(state.templateConfigs.global || DEFAULT_GLOBAL_CONFIG),
+        ...config,
+        id: 'global',
+      };
+
+      for (const evId of Object.keys(state.templateConfigs)) {
+        if (evId !== 'global') {
+          state.templateConfigs[evId] = {
+            ...state.templateConfigs[evId],
+            ...config,
+            id: evId,
+            eventId: evId,
+          };
+        }
+      }
+    }
+
     this.saveState(state);
     return state.templateConfigs[key];
   }

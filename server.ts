@@ -460,10 +460,10 @@ app.get('/api/admin/template', requireAdmin, (req, res) => {
 
 app.put('/api/admin/template', requireAdmin, (req, res) => {
   try {
-    const { key, config } = req.body;
+    const { key, config, applyToAll } = req.body;
     const targetKey = key || 'global';
-    const updated = db.updateTemplateConfig(targetKey, config);
-    res.json(updated);
+    const updated = db.updateTemplateConfig(targetKey, config, applyToAll !== false);
+    res.json({ success: true, templateConfig: updated, ...updated });
   } catch (error: any) {
     res.status(500).json({ error: 'Gagal memperbarui konfigurasi template.' });
   }

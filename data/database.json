@@ -1,0 +1,151 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "username": "sastraindonesia",
+      "passwordHash": "sastrajaya",
+      "role": "admin",
+      "name": "Administrator Sastra Indonesia UM"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt-ws-pkm-2026",
+      "title": "WORKSHOP PROGRAM KREATIVITAS MAHASISWA (PKM)",
+      "subtitle": "Mahasiswa Departemen Sastra Indonesia",
+      "description": "Workshop pendampingan penulisan dan penyusunan proposal Program Kreativitas Mahasiswa (PKM) 5 Bidang, Gagasan Futuristik Tertulis (GFT), dan Gagasan Konstruktif (VGK) untuk mahasiswa Departemen Sastra Indonesia.",
+      "date": "21 September 2026",
+      "location": "Aula Gedung D8 FS Universitas Negeri Malang & Daring",
+      "organizer": "Departemen Sastra Indonesia\nFakultas Sastra\nUniversitas Negeri Malang",
+      "certificatePrefix": "WS-PKM/DSI/FS-UM/2026/",
+      "status": "active",
+      "slug": "workshop-pkm",
+      "counter": 3,
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "updatedAt": "2026-09-21T08:00:00.000Z"
+    },
+    {
+      "id": "evt-semnas-2026",
+      "title": "SEMINAR NASIONAL LITERASI DIGITAL DAN BAHASA INDONESIA",
+      "subtitle": "Tantangan dan Peluang Bahasa dan Sastra Indonesia di Era Kecerdasan Artifisial",
+      "description": "Seminar Nasional yang menghadirkan pakar linguistik dan sastra untuk membahas perkembangan literasi digital dan pemanfaatan AI dalam keilmuan sastra Indonesia.",
+      "date": "15 Oktober 2026",
+      "location": "Graha Cakrawala Universitas Negeri Malang",
+      "organizer": "Departemen Sastra Indonesia\nFakultas Sastra\nUniversitas Negeri Malang",
+      "certificatePrefix": "SEMNAS-LD/DSI/FS-UM/2026/",
+      "status": "inactive",
+      "slug": "seminar-nasional-literasi-digital",
+      "counter": 0,
+      "createdAt": "2026-09-05T09:00:00.000Z",
+      "updatedAt": "2026-09-10T09:00:00.000Z"
+    },
+    {
+      "id": "evt-penulisan-ilmiah-2026",
+      "title": "WORKSHOP PENULISAN KARYA ILMIAH DAN JURNAL TERAKREDITASI",
+      "subtitle": "Strategi Tembus Publikasi Jurnal Nasional Sinta 1 & 2",
+      "description": "Pelatihan teknis penulisan naskah artikel ilmiah berbasis riset kebahasaan dan kesusastraan untuk publikasi bereputasi.",
+      "date": "28 Oktober 2026",
+      "location": "Laboratorium Drama & Komputer Sastra Indonesia UM",
+      "organizer": "Departemen Sastra Indonesia\nFakultas Sastra\nUniversitas Negeri Malang",
+      "certificatePrefix": "WS-PKI/DSI/FS-UM/2026/",
+      "status": "inactive",
+      "slug": "workshop-penulisan-karya-ilmiah",
+      "counter": 0,
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-15T10:00:00.000Z"
+    }
+  ],
+  "participants": [
+    {
+      "id": "part-1",
+      "eventId": "evt-ws-pkm-2026",
+      "fullName": "Siti Rahmawati",
+      "certificateNumber": "WS-PKM/DSI/FS-UM/2026/001",
+      "createdAt": "2026-09-21T09:15:20.000Z",
+      "verificationCode": "VER-9A7B1C"
+    },
+    {
+      "id": "part-2",
+      "eventId": "evt-ws-pkm-2026",
+      "fullName": "Bagas Aditya Pratama",
+      "certificateNumber": "WS-PKM/DSI/FS-UM/2026/002",
+      "createdAt": "2026-09-21T09:30:11.000Z",
+      "verificationCode": "VER-3E4F8A"
+    },
+    {
+      "id": "part-3",
+      "eventId": "evt-ws-pkm-2026",
+      "fullName": "Citra Dewi Kusuma Wardhani",
+      "certificateNumber": "WS-PKM/DSI/FS-UM/2026/003",
+      "createdAt": "2026-09-21T10:05:44.000Z",
+      "verificationCode": "VER-7D2C9B"
+    }
+  ],
+  "templateConfigs": {
+    "global": {
+      "id": "global",
+      "certificateTitle": "SERTIFIKAT",
+      "recipientPrefix": "Diberikan kepada:",
+      "awardText": "Sebagai peserta dalam kegiatan",
+      "signerName": "Dr. Moch. Syahri, S.Sos., M.Si.",
+      "signerPosition": "Ketua Departemen Sastra Indonesia",
+      "signerNip": "NIP 197105282001121001",
+      "primaryColor": "#6B1724",
+      "secondaryColor": "#C5A059",
+      "logoUm": "",
+      "logoFs": "",
+      "logoDsi": "",
+      "signatureImage": "",
+      "stampImage": "",
+      "universityName": "UNIVERSITAS NEGERI MALANG",
+      "facultyName": "FAKULTAS SASTRA",
+      "departmentName": "DEPARTEMEN SASTRA INDONESIA",
+      "fontSizeTitle": 32,
+      "fontSizeName": 30,
+      "fontSizeBody": 14,
+      "frameStyle": "classic-double",
+      "showQr": true,
+      "signatureSize": 70,
+      "stampSize": 75,
+      "logoSize": 70,
+      "showLogos": true,
+      "showLogoUm": true,
+      "showLogoFs": true,
+      "showLogoDsi": true,
+      "hideLogoPlaceholders": false
+    },
+    "evt-ws-pkm-2026": {
+      "id": "evt-ws-pkm-2026",
+      "certificateTitle": "SERTIFIKAT",
+      "recipientPrefix": "Diberikan kepada:",
+      "awardText": "Sebagai peserta dalam kegiatan",
+      "signerName": "Dr. Moch. Syahri, S.Sos., M.Si.",
+      "signerPosition": "Ketua Departemen Sastra Indonesia",
+      "signerNip": "NIP 197105282001121001",
+      "primaryColor": "#6B1724",
+      "secondaryColor": "#C5A059",
+      "logoUm": "",
+      "logoFs": "",
+      "logoDsi": "",
+      "signatureImage": "",
+      "stampImage": "",
+      "universityName": "UNIVERSITAS NEGERI MALANG",
+      "facultyName": "FAKULTAS SASTRA",
+      "departmentName": "DEPARTEMEN SASTRA INDONESIA",
+      "fontSizeTitle": 32,
+      "fontSizeName": 30,
+      "fontSizeBody": 14,
+      "frameStyle": "classic-double",
+      "showQr": true,
+      "signatureSize": 70,
+      "stampSize": 75,
+      "logoSize": 70,
+      "showLogos": true,
+      "showLogoUm": true,
+      "showLogoFs": true,
+      "showLogoDsi": true,
+      "hideLogoPlaceholders": false,
+      "eventId": "evt-ws-pkm-2026"
+    }
+  }
+}
