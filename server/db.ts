@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from './defaultLogos.ts';
 
 export interface User {
   id: string;
@@ -88,9 +89,9 @@ const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   signerNip: 'NIP 197105282001121001',
   primaryColor: '#6B1724',
   secondaryColor: '#C5A059',
-  logoUm: '',
-  logoFs: '',
-  logoDsi: '',
+  logoUm: DEFAULT_UM_LOGO,
+  logoFs: DEFAULT_FS_LOGO,
+  logoDsi: DEFAULT_DSI_LOGO,
   signatureImage: '',
   stampImage: '',
   universityName: 'UNIVERSITAS NEGERI MALANG',
@@ -229,6 +230,19 @@ class Database {
         fs.writeFileSync(DB_FILE, JSON.stringify(DEFAULT_DATA, null, 2), 'utf-8');
         return DEFAULT_DATA;
       }
+
+      // Ensure template configs have official logos if previously empty
+      if (parsed.templateConfigs) {
+        if (parsed.templateConfigs.global) {
+          if (!parsed.templateConfigs.global.logoUm) parsed.templateConfigs.global.logoUm = DEFAULT_UM_LOGO;
+          if (!parsed.templateConfigs.global.logoFs) parsed.templateConfigs.global.logoFs = DEFAULT_FS_LOGO;
+        }
+        for (const k of Object.keys(parsed.templateConfigs)) {
+          if (!parsed.templateConfigs[k].logoUm) parsed.templateConfigs[k].logoUm = DEFAULT_UM_LOGO;
+          if (!parsed.templateConfigs[k].logoFs) parsed.templateConfigs[k].logoFs = DEFAULT_FS_LOGO;
+        }
+      }
+
       return parsed;
     } catch (err) {
       console.error('Error loading database, using default data:', err);
@@ -439,6 +453,14 @@ class Database {
       return {
         ...globalCfg,
         ...eventCfg,
+        logoUm: eventCfg.logoUm || globalCfg.logoUm || DEFAULT_GLOBAL_CONFIG.logoUm,
+        logoFs: eventCfg.logoFs || globalCfg.logoFs || DEFAULT_GLOBAL_CONFIG.logoFs,
+        logoDsi: eventCfg.logoDsi || globalCfg.logoDsi || DEFAULT_GLOBAL_CONFIG.logoDsi,
+        signatureImage: eventCfg.signatureImage || globalCfg.signatureImage,
+        stampImage: eventCfg.stampImage || globalCfg.stampImage,
+        logoSize: eventCfg.logoSize || globalCfg.logoSize || 70,
+        signatureSize: eventCfg.signatureSize || globalCfg.signatureSize || 70,
+        stampSize: eventCfg.stampSize || globalCfg.stampSize || 75,
         id: eventId,
         eventId,
       };
@@ -462,6 +484,16 @@ class Database {
         ...updates,
         id: 'global',
       };
+
+      // Propagate to all events
+      for (const evt of this.data.events) {
+        this.data.templateConfigs[evt.id] = {
+          ...(this.data.templateConfigs[evt.id] || {}),
+          ...updates,
+          id: evt.id,
+          eventId: evt.id,
+        };
+      }
 
       for (const evId of Object.keys(this.data.templateConfigs)) {
         if (evId !== 'global') {

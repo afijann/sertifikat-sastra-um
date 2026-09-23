@@ -10,6 +10,10 @@ const PORT = 3000;
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
+// Static assets serving: explicitly serve /assets from public/assets and public root
+app.use('/assets', express.static(path.join(process.cwd(), 'public/assets')));
+app.use(express.static(path.join(process.cwd(), 'public')));
+
 // Simple in-memory session token store for admin
 const validTokens = new Set<string>();
 

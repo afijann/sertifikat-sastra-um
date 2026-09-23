@@ -10,7 +10,7 @@ import { localDb } from './localDatabase';
 async function safeFetchJson<T>(url: string, options?: RequestInit): Promise<{ success: boolean; data?: T; status?: number; error?: string }> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for reliable response across all devices
 
     const res = await fetch(url, {
       ...options,
@@ -94,6 +94,9 @@ export const apiClient = {
   async getActiveEvent(): Promise<{ event: EventItem | null; templateConfig: CertificateConfig; message?: string }> {
     const res = await safeFetchJson<{ event: EventItem | null; templateConfig: CertificateConfig; message?: string }>('/api/public/active-event');
     if (res.success && res.data) {
+      if (res.data.templateConfig) {
+        localDb.saveTemplateConfig(res.data.templateConfig, false);
+      }
       return res.data;
     }
     return localDb.getActiveEvent();
@@ -103,6 +106,9 @@ export const apiClient = {
   async getEventBySlug(slug: string): Promise<{ event: EventItem | null; templateConfig: CertificateConfig; message?: string }> {
     const res = await safeFetchJson<{ event: EventItem | null; templateConfig: CertificateConfig; message?: string }>(`/api/public/event/${slug}`);
     if (res.success && res.data) {
+      if (res.data.templateConfig) {
+        localDb.saveTemplateConfig(res.data.templateConfig, false);
+      }
       return res.data;
     }
     return localDb.getEventBySlug(slug);
@@ -130,6 +136,9 @@ export const apiClient = {
     });
 
     if (res.success && res.data?.participant) {
+      if (res.data.templateConfig) {
+        localDb.saveTemplateConfig(res.data.templateConfig, false);
+      }
       return res.data;
     }
 

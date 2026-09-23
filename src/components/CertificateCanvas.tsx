@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CertificateConfig, EventItem, Participant } from '../types';
 import { generateQrDataUrl } from '../utils/pdfGenerator';
+import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_UM_SVG, DEFAULT_FS_SVG } from '../utils/defaultLogos';
 import { Award, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface CertificateCanvasProps {
@@ -48,8 +49,13 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const sigHeight = config.signatureSize || 70;
   const stmpSize = config.stampSize || 75;
   const logoHeight = config.logoSize || 70;
-  const logoContainerWidth = Math.max(90, Math.round(logoHeight * 1.35));
+  const logoUmContainerWidth = Math.max(135, Math.round(logoHeight * 1.85));
+  const logoFsContainerWidth = Math.max(90, Math.round(logoHeight * 1.35));
   const logoContainerHeight = Math.max(72, Math.round(logoHeight * 1.15));
+
+  const finalLogoUm = config.logoUm || DEFAULT_UM_LOGO || DEFAULT_UM_SVG;
+  const finalLogoFs = config.logoFs || DEFAULT_FS_LOGO || DEFAULT_FS_SVG;
+  const effectiveLogoDsi = config.logoDsi;
 
   return (
     <div
@@ -114,33 +120,32 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             className="flex items-center justify-between gap-6 pb-2 border-b"
             style={{ borderColor: '#E2E8F0' }}
           >
-            {/* Logo 1: Logo Universitas Negeri Malang */}
+            {/* Logo 1: Logo Universitas Negeri Malang (Paten Resmi UM) */}
             {showLogoUm ? (
               <div 
-                style={{ width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} 
+                style={{ width: `${logoUmContainerWidth}px`, height: `${logoContainerHeight}px` }} 
                 className="flex items-center justify-center shrink-0"
               >
-                {config.logoUm ? (
-                  <img 
-                    src={config.logoUm} 
-                    alt="Logo Universitas Negeri Malang" 
-                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${logoContainerWidth}px` }}
-                    className="object-contain"
-                  />
-                ) : !hidePlaceholders ? (
-                  <div 
-                    style={{ width: `${Math.min(76, logoHeight)}px`, height: `${Math.min(76, logoHeight)}px`, borderColor: primaryColor, color: primaryColor }}
-                    className="rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
-                  >
-                    <Award className="w-6 h-6 mb-0.5 opacity-80" />
-                    <span className="text-[9px] font-bold leading-none tracking-tight">LOGO UM</span>
-                  </div>
-                ) : (
-                  <div style={{ width: `${logoHeight}px`, height: `${logoHeight}px` }} />
-                )}
+                <img 
+                  src={finalLogoUm} 
+                  alt="Logo Resmi Universitas Negeri Malang" 
+                  crossOrigin="anonymous"
+                  loading="eager"
+                  decoding="sync"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.src.includes('/assets/logo-um.png') && !target.src.startsWith('data:image/svg')) {
+                      target.src = '/assets/logo-um.png';
+                    } else if (target.src.includes('/assets/logo-um.png')) {
+                      target.src = DEFAULT_UM_SVG;
+                    }
+                  }}
+                  style={{ maxHeight: `${logoHeight}px`, maxWidth: `${logoUmContainerWidth}px` }}
+                  className="object-contain"
+                />
               </div>
             ) : (
-              showLogos && <div style={{ width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
+              showLogos && <div style={{ width: `${logoUmContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
             )}
 
             {/* Institutional Identity Heading */}
@@ -174,26 +179,40 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             {/* Logo 2 & 3: Logo Fakultas Sastra & Dept Sastra Indonesia */}
             {showLogoFs ? (
               <div 
-                style={{ minWidth: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} 
+                style={{ minWidth: `${logoFsContainerWidth}px`, height: `${logoContainerHeight}px` }} 
                 className="flex items-center justify-center gap-2 shrink-0"
               >
-                {config.logoFs && (
+                {finalLogoFs && (
                   <img 
-                    src={config.logoFs} 
+                    src={finalLogoFs} 
                     alt="Logo Fakultas Sastra UM" 
-                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoContainerWidth * 0.95)}px` }}
+                    crossOrigin="anonymous"
+                    loading="eager"
+                    decoding="sync"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.includes('/assets/logo-fs-um.svg')) {
+                        target.src = '/assets/logo-fs-um.svg';
+                      } else {
+                        target.src = DEFAULT_FS_SVG;
+                      }
+                    }}
+                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoFsContainerWidth * 0.95)}px` }}
                     className="object-contain"
                   />
                 )}
-                {config.logoDsi && (
+                {effectiveLogoDsi && (
                   <img 
-                    src={config.logoDsi} 
+                    src={effectiveLogoDsi} 
                     alt="Logo Departemen Sastra Indonesia" 
-                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoContainerWidth * 0.95)}px` }}
+                    crossOrigin="anonymous"
+                    loading="eager"
+                    decoding="sync"
+                    style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoFsContainerWidth * 0.95)}px` }}
                     className="object-contain"
                   />
                 )}
-                {!config.logoFs && !config.logoDsi && (!hidePlaceholders ? (
+                {!finalLogoFs && !effectiveLogoDsi && (!hidePlaceholders ? (
                   <div 
                     style={{ width: `${Math.min(76, logoHeight)}px`, height: `${Math.min(76, logoHeight)}px`, borderColor: secondaryColor, color: secondaryColor }}
                     className="rounded-full border-2 border-dashed flex flex-col items-center justify-center text-center p-1"
@@ -206,7 +225,7 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                 ))}
               </div>
             ) : (
-              showLogos && <div style={{ width: `${logoContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
+              showLogos && <div style={{ width: `${logoFsContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
             )}
           </div>
 

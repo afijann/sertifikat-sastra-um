@@ -1,6 +1,7 @@
 import { EventItem, Participant, CertificateConfig, DashboardStats, AdminUser } from '../types';
+import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from './defaultLogos';
 
-const STORAGE_KEY = 'sastra_um_certificate_database_v2';
+const STORAGE_KEY = 'sastra_um_certificate_database_v3';
 
 export interface DatabaseState {
   users: { id: string; username: string; passwordHash: string; name: string; role: string }[];
@@ -19,9 +20,9 @@ export const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   signerNip: 'NIP 197105282001121001',
   primaryColor: '#6B1724',
   secondaryColor: '#C5A059',
-  logoUm: '',
-  logoFs: '',
-  logoDsi: '',
+  logoUm: DEFAULT_UM_LOGO,
+  logoFs: DEFAULT_FS_LOGO,
+  logoDsi: DEFAULT_DSI_LOGO,
   signatureImage: '',
   stampImage: '',
   universityName: 'UNIVERSITAS NEGERI MALANG',
@@ -124,7 +125,34 @@ class LocalDatabase {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed.events && parsed.participants && parsed.templateConfigs) {
+          // Guarantee official logos if not set
+          if (parsed.templateConfigs.global) {
+            if (!parsed.templateConfigs.global.logoUm) parsed.templateConfigs.global.logoUm = DEFAULT_UM_LOGO;
+            if (!parsed.templateConfigs.global.logoFs) parsed.templateConfigs.global.logoFs = DEFAULT_FS_LOGO;
+          }
           return parsed;
+        }
+      }
+
+      // Check migration from v2 or v1
+      const oldRaw = localStorage.getItem('sastra_um_certificate_database_v2') || localStorage.getItem('sastra_um_certificate_database_v1');
+      if (oldRaw) {
+        const oldParsed = JSON.parse(oldRaw);
+        if (oldParsed.events && oldParsed.participants) {
+          const migrated: DatabaseState = {
+            users: oldParsed.users || [],
+            events: oldParsed.events || DEFAULT_EVENTS,
+            participants: oldParsed.participants || DEFAULT_PARTICIPANTS,
+            templateConfigs: oldParsed.templateConfigs || {},
+          };
+          migrated.templateConfigs.global = {
+            ...DEFAULT_GLOBAL_CONFIG,
+            ...(migrated.templateConfigs.global || {}),
+            logoUm: migrated.templateConfigs.global?.logoUm || DEFAULT_UM_LOGO,
+            logoFs: migrated.templateConfigs.global?.logoFs || DEFAULT_FS_LOGO,
+          };
+          this.saveState(migrated);
+          return migrated;
         }
       }
     } catch {
@@ -468,9 +496,18 @@ class LocalDatabase {
     const state = this.getState();
     const globalCfg = state.templateConfigs.global || DEFAULT_GLOBAL_CONFIG;
     if (eventId && state.templateConfigs[eventId]) {
+      const eventCfg = state.templateConfigs[eventId];
       return {
         ...globalCfg,
-        ...state.templateConfigs[eventId],
+        ...eventCfg,
+        logoUm: eventCfg.logoUm || globalCfg.logoUm || DEFAULT_GLOBAL_CONFIG.logoUm,
+        logoFs: eventCfg.logoFs || globalCfg.logoFs || DEFAULT_GLOBAL_CONFIG.logoFs,
+        logoDsi: eventCfg.logoDsi || globalCfg.logoDsi || DEFAULT_GLOBAL_CONFIG.logoDsi,
+        signatureImage: eventCfg.signatureImage || globalCfg.signatureImage,
+        stampImage: eventCfg.stampImage || globalCfg.stampImage,
+        logoSize: eventCfg.logoSize || globalCfg.logoSize || 70,
+        signatureSize: eventCfg.signatureSize || globalCfg.signatureSize || 70,
+        stampSize: eventCfg.stampSize || globalCfg.stampSize || 75,
         id: eventId,
         eventId,
       };
@@ -489,6 +526,16 @@ class LocalDatabase {
         ...config,
         id: 'global',
       };
+
+      // Propagate to all events
+      for (const evt of state.events) {
+        state.templateConfigs[evt.id] = {
+          ...(state.templateConfigs[evt.id] || {}),
+          ...config,
+          id: evt.id,
+          eventId: evt.id,
+        };
+      }
 
       for (const evId of Object.keys(state.templateConfigs)) {
         if (evId !== 'global') {

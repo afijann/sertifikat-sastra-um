@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { EventItem, CertificateConfig, Participant } from '../types';
 import { CertificateCanvas } from '../components/CertificateCanvas';
 import { downloadCertificatePdf } from '../utils/pdfGenerator';
@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import { 
   Award, 
   Download, 
+  Printer,
   CheckCircle, 
   AlertCircle, 
   ShieldCheck, 
@@ -42,11 +43,80 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState<number>(0.75);
+
+  // Responsive preview scale so entire A4 certificate fits inside any screen perfectly
+  useEffect(() => {
+    const computeScale = () => {
+      if (!previewContainerRef.current) return;
+      const width = previewContainerRef.current.clientWidth - 24; // account for container padding
+      if (width > 0) {
+        const scale = Math.min(1, Math.max(0.28, width / 1123));
+        setPreviewScale(scale);
+      }
+    };
+
+    computeScale();
+    window.addEventListener('resize', computeScale);
+    const timer = setTimeout(computeScale, 100);
+    return () => {
+      window.removeEventListener('resize', computeScale);
+      clearTimeout(timer);
+    };
+  }, [participant]);
 
   // Load Event (either by slug or active event)
   useEffect(() => {
     fetchEventData();
   }, [initialEventSlug]);
+
+  // Live Auto-Sync: Automatically sync latest template changes (TTD, Stempel, Ukuran, dsb)
+  // adjusted by admin without requiring student to reload the browser
+  useEffect(() => {
+    if (!event) return;
+
+    const syncLatestTemplate = async () => {
+      try {
+        const data = initialEventSlug
+          ? await apiClient.getEventBySlug(initialEventSlug)
+          : await apiClient.getActiveEvent();
+
+        if (data.templateConfig) {
+          setTemplateConfig((prev) => {
+            if (!prev) return data.templateConfig;
+            // Only update state if properties changed to prevent unnecessary re-renders
+            if (
+              prev.signatureImage !== data.templateConfig.signatureImage ||
+              prev.stampImage !== data.templateConfig.stampImage ||
+              prev.signatureSize !== data.templateConfig.signatureSize ||
+              prev.stampSize !== data.templateConfig.stampSize ||
+              prev.signerName !== data.templateConfig.signerName ||
+              prev.signerPosition !== data.templateConfig.signerPosition ||
+              prev.signerNip !== data.templateConfig.signerNip ||
+              prev.logoUm !== data.templateConfig.logoUm ||
+              prev.logoFs !== data.templateConfig.logoFs ||
+              prev.logoSize !== data.templateConfig.logoSize
+            ) {
+              return { ...prev, ...data.templateConfig };
+            }
+            return prev;
+          });
+        }
+      } catch (_) {
+        // silent fail during background sync
+      }
+    };
+
+    // Poll every 4 seconds, and immediately when tab gains focus
+    const interval = setInterval(syncLatestTemplate, 4000);
+    window.addEventListener('focus', syncLatestTemplate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', syncLatestTemplate);
+    };
+  }, [event?.id, initialEventSlug]);
 
   const fetchEventData = async () => {
     setLoading(true);
@@ -129,10 +199,14 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
       });
     } catch (err: any) {
       console.error('Download error:', err);
-      alert('Gagal mengunduh file PDF. Silakan coba gunakan tombol cetak browser atau refresh halaman.');
+      alert('Gagal mengunduh file PDF. Silakan coba gunakan tombol Cetak (A4) atau muat ulang halaman.');
     } finally {
       setDownloading(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const resetForm = () => {
@@ -283,12 +357,12 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
                     id="btn-download-pdf"
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="flex-1 sm:flex-none px-6 py-3 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                    className="flex-1 sm:flex-none px-6 py-3 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
                   >
                     {downloading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Menyiapkan PDF...</span>
+                        <span>Menyiapkan PDF Utuh...</span>
                       </>
                     ) : (
                       <>
@@ -299,9 +373,19 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
                   </button>
 
                   <button
+                    id="btn-print-certificate"
+                    onClick={handlePrint}
+                    className="px-4 py-3 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 font-semibold rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Cetak langsung menggunakan printer atau dialog cetak browser"
+                  >
+                    <Printer className="w-4 h-4 text-[#6B1724]" />
+                    <span>Cetak (A4)</span>
+                  </button>
+
+                  <button
                     id="btn-check-verify"
                     onClick={() => onNavigateToVerify(participant.certificateNumber)}
-                    className="px-4 py-3 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 font-semibold rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
+                    className="px-4 py-3 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 font-semibold rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                     title="Buka halaman verifikasi keaslian sertifikat"
                   >
                     <ExternalLink className="w-3.5 h-3.5 text-[#6B1724]" />
@@ -318,20 +402,32 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
                     Preview Sertifikat Resmi (A4 Landscape)
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    Siap Dicetak & Disimpan
+                    Siap Dicetak & Disimpan Utuh
                   </span>
                 </div>
 
                 {/* Scaled Responsive Viewport for Certificate Canvas */}
-                <div className="w-full overflow-x-auto bg-slate-200/70 p-2 sm:p-4 rounded-xl border border-slate-300 flex justify-center shadow-inner">
+                <div 
+                  ref={previewContainerRef} 
+                  className="w-full bg-slate-200/80 p-3 sm:p-5 rounded-xl border border-slate-300 flex items-center justify-center overflow-hidden shadow-inner"
+                >
                   <div 
-                    className="transform-gpu origin-top transition-transform"
                     style={{
-                      // Scale down dynamically for smaller screens while keeping exact 1123x794 px render
-                      maxWidth: '100%',
+                      width: `${Math.round(1123 * previewScale)}px`,
+                      height: `${Math.round(794 * previewScale)}px`,
+                      position: 'relative',
                     }}
+                    className="shadow-2xl rounded-sm bg-white overflow-hidden shrink-0"
                   >
-                    <div className="shadow-2xl rounded-sm overflow-hidden bg-white">
+                    <div 
+                      id="certificate-print-area"
+                      style={{
+                        transform: `scale(${previewScale})`,
+                        transformOrigin: 'top left',
+                        width: '1123px',
+                        height: '794px',
+                      }}
+                    >
                       <CertificateCanvas
                         id="student-certificate-preview-canvas"
                         participant={participant}

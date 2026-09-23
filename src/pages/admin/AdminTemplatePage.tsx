@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CertificateConfig, EventItem, Participant } from '../../types';
 import { CertificateCanvas } from '../../components/CertificateCanvas';
 import { apiClient } from '../../utils/apiClient';
+import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from '../../utils/defaultLogos';
 import { 
   Palette, 
   Upload, 
@@ -216,9 +217,12 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
       </div>
 
       {saveSuccess && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Konfigurasi template berhasil disimpan dan langsung diterapkan ke seluruh sertifikat terkait.</span>
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-center gap-2.5 shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <div>
+            <p className="font-bold">Konfigurasi Berhasil Disimpan!</p>
+            <p className="text-emerald-700 text-[11px]">Tanda tangan, stempel, ukuran, dan identitas sertifikat otomatis terupdate secara real-time pada seluruh mahasiswa yang mengisi.</p>
+          </div>
         </div>
       )}
 
@@ -366,39 +370,45 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   </label>
                 </div>
                 
-                <div className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white">
-                  {config.logoUm ? (
-                    <img src={config.logoUm} alt="Logo UM" className="max-h-full max-w-full object-contain" />
-                  ) : (
-                    <div className="text-center p-2">
-                      <Award className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-                      <span className="text-[10px] text-slate-400 font-semibold block leading-tight">
-                        {config.hideLogoPlaceholders ? '(Logo Disembunyikan)' : '[Placeholder Logo UM]'}
-                      </span>
-                    </div>
-                  )}
+                <div className="w-full h-28 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white shadow-xs overflow-hidden">
+                  <img 
+                    src={config.logoUm || DEFAULT_UM_LOGO} 
+                    alt="Logo UM (Paten Resmi)" 
+                    className="max-h-full max-w-full object-contain" 
+                  />
                 </div>
 
-                <div className="flex items-center gap-2 w-full">
-                  <label className="flex-1 py-1.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleFileUpload('logoUm', e)}
-                    />
-                    <span>{config.logoUm ? 'Ganti Logo' : 'Upload Logo UM'}</span>
-                  </label>
-                  {config.logoUm && (
+                <div className="flex flex-col gap-1.5 w-full">
+                  <div className="flex items-center gap-2 w-full">
+                    <label className="flex-1 py-1.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload('logoUm', e)}
+                      />
+                      <span>{config.logoUm ? 'Ganti Logo' : 'Upload Kustom'}</span>
+                    </label>
+                    {config.logoUm && (
+                      <button
+                        type="button"
+                        id="btn-remove-logo-um"
+                        onClick={() => handleRemoveImage('logoUm')}
+                        className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
+                        title="Hapus Logo UM"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
+                      </button>
+                    )}
+                  </div>
+                  {config.logoUm !== DEFAULT_UM_LOGO && (
                     <button
                       type="button"
-                      id="btn-remove-logo-um"
-                      onClick={() => handleRemoveImage('logoUm')}
-                      className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
-                      title="Hapus Logo UM"
+                      onClick={() => setConfig({ ...config, logoUm: DEFAULT_UM_LOGO })}
+                      className="text-[11px] text-[#6B1724] hover:underline font-semibold"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Hapus</span>
+                      ↺ Pakai Logo Resmi UM
                     </button>
                   )}
                 </div>
@@ -419,39 +429,45 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   </label>
                 </div>
                 
-                <div className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white">
+                <div className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center p-2 mb-3 bg-white shadow-xs">
                   {config.logoFs ? (
                     <img src={config.logoFs} alt="Logo FS" className="max-h-full max-w-full object-contain" />
                   ) : (
-                    <div className="text-center p-2">
-                      <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-                      <span className="text-[10px] text-slate-400 font-semibold block leading-tight">
-                        {config.hideLogoPlaceholders ? '(Logo Disembunyikan)' : '[Placeholder Logo FS]'}
-                      </span>
-                    </div>
+                    <img src={DEFAULT_FS_LOGO} alt="Logo FS (Resmi)" className="max-h-full max-w-full object-contain" />
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 w-full">
-                  <label className="flex-1 py-1.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleFileUpload('logoFs', e)}
-                    />
-                    <span>{config.logoFs ? 'Ganti Logo' : 'Upload Logo FS'}</span>
-                  </label>
-                  {config.logoFs && (
+                <div className="flex flex-col gap-1.5 w-full">
+                  <div className="flex items-center gap-2 w-full">
+                    <label className="flex-1 py-1.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md cursor-pointer text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload('logoFs', e)}
+                      />
+                      <span>{config.logoFs ? 'Ganti Logo' : 'Upload Kustom'}</span>
+                    </label>
+                    {config.logoFs && (
+                      <button
+                        type="button"
+                        id="btn-remove-logo-fs"
+                        onClick={() => handleRemoveImage('logoFs')}
+                        className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
+                        title="Hapus Logo FS"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
+                      </button>
+                    )}
+                  </div>
+                  {config.logoFs !== DEFAULT_FS_LOGO && (
                     <button
                       type="button"
-                      id="btn-remove-logo-fs"
-                      onClick={() => handleRemoveImage('logoFs')}
-                      className="px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded flex items-center gap-1 font-medium cursor-pointer"
-                      title="Hapus Logo FS"
+                      onClick={() => setConfig({ ...config, logoFs: DEFAULT_FS_LOGO })}
+                      className="text-[11px] text-[#6B1724] hover:underline font-semibold"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Hapus</span>
+                      ↺ Pakai Logo Resmi FS
                     </button>
                   )}
                 </div>
