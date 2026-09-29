@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { CertificateConfig, EventItem, Participant } from '../types';
 import { generateQrDataUrl } from '../utils/pdfGenerator';
-import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_UM_SVG, DEFAULT_FS_SVG } from '../utils/defaultLogos';
+import {
+  DEFAULT_UM_LOGO,
+  DEFAULT_FS_LOGO,
+  DEFAULT_DSI_LOGO,
+  DEFAULT_SIGNATURE,
+  DEFAULT_STAMP,
+  DEFAULT_SIGNER_NAME,
+  DEFAULT_SIGNER_POSITION,
+  DEFAULT_SIGNER_NIP,
+} from '../utils/defaultLogos';
 import { Award, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface CertificateCanvasProps {
@@ -393,10 +402,10 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                 className="text-[11px] font-semibold mb-0.5 font-sans"
                 style={{ color: '#1E293B' }}
               >
-                {config.signerPosition || 'Ketua Departemen Sastra Indonesia'}
+                {config.signerPosition || DEFAULT_SIGNER_POSITION}
               </p>
 
-              {/* Signature Graphic Area with optional official stamp */}
+              {/* Signature Graphic Area with official stamp */}
               <div 
                 className="relative mx-auto flex items-center justify-center my-0.5"
                 style={{ 
@@ -406,9 +415,9 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                 }}
               >
                 {/* Official Stamp behind/overlay signature */}
-                {config.stampImage && (
+                {(config.stampImage || DEFAULT_STAMP) && (
                   <img 
-                    src={config.stampImage} 
+                    src={config.stampImage || DEFAULT_STAMP} 
                     alt="Stempel Resmi" 
                     style={{
                       height: `${stmpSize}px`,
@@ -421,31 +430,16 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                 )}
 
                 {/* Digital Signature */}
-                {config.signatureImage ? (
-                  <img 
-                    src={config.signatureImage} 
-                    alt="Tanda Tangan Digital" 
-                    style={{ 
-                      maxHeight: `${sigHeight}px`, 
-                      maxWidth: '100%',
-                      objectFit: 'contain',
-                    }}
-                    className="relative z-10"
-                  />
-                ) : (
-                  <div className="text-center">
-                    <span 
-                      className="font-script text-2xl block -mb-2"
-                      style={{ color: '#334155' }}
-                    >
-                      {config.signerName ? config.signerName.split(',')[0] : 'Dr. Moch. Syahri'}
-                    </span>
-                    <div 
-                      className="w-32 h-[1px] mx-auto"
-                      style={{ backgroundColor: '#CBD5E1' }}
-                    />
-                  </div>
-                )}
+                <img 
+                  src={config.signatureImage || DEFAULT_SIGNATURE} 
+                  alt="Tanda Tangan Digital" 
+                  style={{ 
+                    maxHeight: `${sigHeight}px`, 
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                  }}
+                  className="relative z-10"
+                />
               </div>
 
               {/* Signer Name & NIP */}
@@ -453,16 +447,14 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                 className="text-[11px] font-bold underline underline-offset-2 font-serif"
                 style={{ color: '#0F172A' }}
               >
-                {config.signerName || 'Dr. Moch. Syahri, S.Sos., M.Si.'}
+                {config.signerName || DEFAULT_SIGNER_NAME}
               </p>
-              {config.signerNip && (
-                <p 
-                  className="text-[9px] font-sans mt-0.5"
-                  style={{ color: '#475569' }}
-                >
-                  {config.signerNip}
-                </p>
-              )}
+              <p 
+                className="text-[9px] font-sans mt-0.5"
+                style={{ color: '#475569' }}
+              >
+                {config.signerNip || DEFAULT_SIGNER_NIP}
+              </p>
             </div>
 
 

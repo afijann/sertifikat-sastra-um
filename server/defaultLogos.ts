@@ -1,1 +1,10 @@
-export { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from '../src/utils/defaultLogos.ts';
+export {
+  DEFAULT_UM_LOGO,
+  DEFAULT_FS_LOGO,
+  DEFAULT_DSI_LOGO,
+  DEFAULT_SIGNATURE,
+  DEFAULT_STAMP,
+  DEFAULT_SIGNER_NAME,
+  DEFAULT_SIGNER_POSITION,
+  DEFAULT_SIGNER_NIP,
+} from '../src/utils/defaultLogos.ts';

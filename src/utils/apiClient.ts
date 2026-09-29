@@ -199,18 +199,21 @@ export const apiClient = {
 
   // ADMIN: GET ALL EVENTS
   async getAllEvents(adminToken: string): Promise<EventItem[]> {
-    const res = await safeFetchJson<{ events: EventItem[] }>('/api/admin/events', {
+    const res = await safeFetchJson<any>('/api/admin/events', {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
-    if (res.success && res.data?.events) {
-      return res.data.events;
+    if (res.success && res.data) {
+      const list = Array.isArray(res.data) ? res.data : (res.data.events || []);
+      if (list.length > 0) {
+        return list;
+      }
     }
     return localDb.getAllEvents();
   },
 
   // ADMIN: CREATE EVENT
   async createEvent(adminToken: string, data: Partial<EventItem>): Promise<EventItem> {
-    const res = await safeFetchJson<{ event: EventItem }>('/api/admin/events', {
+    const res = await safeFetchJson<any>('/api/admin/events', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -220,15 +223,19 @@ export const apiClient = {
     });
 
     const localEvent = localDb.createEvent(data);
-    if (res.success && res.data?.event) {
-      return res.data.event;
+    if (res.success && res.data) {
+      const item = res.data.event || (res.data.id ? res.data : null);
+      if (item) {
+        localDb.createEvent(item);
+        return item;
+      }
     }
     return localEvent;
   },
 
   // ADMIN: UPDATE EVENT
   async updateEvent(adminToken: string, id: string, data: Partial<EventItem>): Promise<EventItem> {
-    const res = await safeFetchJson<{ event: EventItem }>(`/api/admin/events/${id}`, {
+    const res = await safeFetchJson<any>(`/api/admin/events/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -238,22 +245,30 @@ export const apiClient = {
     });
 
     const localUpdated = localDb.updateEvent(id, data);
-    if (res.success && res.data?.event) {
-      return res.data.event;
+    if (res.success && res.data) {
+      const item = res.data.event || (res.data.id ? res.data : null);
+      if (item) {
+        localDb.updateEvent(id, item);
+        return item;
+      }
     }
     return localUpdated;
   },
 
   // ADMIN: TOGGLE EVENT STATUS
   async toggleEventStatus(adminToken: string, id: string): Promise<EventItem> {
-    const res = await safeFetchJson<{ event: EventItem }>(`/api/admin/events/${id}/toggle-status`, {
-      method: 'PATCH',
+    const res = await safeFetchJson<any>(`/api/admin/events/${id}/toggle-status`, {
+      method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
     const localToggled = localDb.toggleEventStatus(id);
-    if (res.success && res.data?.event) {
-      return res.data.event;
+    if (res.success && res.data) {
+      const item = res.data.event || (res.data.id ? res.data : null);
+      if (item) {
+        localDb.toggleEventStatus(id);
+        return item;
+      }
     }
     return localToggled;
   },
@@ -270,12 +285,15 @@ export const apiClient = {
   // ADMIN: GET PARTICIPANTS
   async getParticipants(adminToken: string, eventId?: string): Promise<Participant[]> {
     const query = eventId ? `?eventId=${eventId}` : '';
-    const res = await safeFetchJson<{ participants: Participant[] }>(`/api/admin/participants${query}`, {
+    const res = await safeFetchJson<any>(`/api/admin/participants${query}`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    if (res.success && res.data?.participants) {
-      return res.data.participants;
+    if (res.success && res.data) {
+      const list = Array.isArray(res.data) ? res.data : (res.data.participants || res.data.list || null);
+      if (list) {
+        return list;
+      }
     }
     return localDb.getAllParticipants(eventId);
   },
@@ -291,7 +309,7 @@ export const apiClient = {
 
   // ADMIN: REGENERATE CERTIFICATE
   async regenerateCertificate(adminToken: string, participantId: string): Promise<Participant> {
-    const res = await safeFetchJson<{ participant: Participant }>(`/api/admin/participants/${participantId}/regenerate`, {
+    const res = await safeFetchJson<any>(`/api/admin/participants/${participantId}/regenerate`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
@@ -306,12 +324,16 @@ export const apiClient = {
   // ADMIN: GET TEMPLATE CONFIG
   async getTemplateConfig(adminToken: string, eventId?: string): Promise<CertificateConfig> {
     const query = eventId ? `?eventId=${eventId}` : '';
-    const res = await safeFetchJson<{ templateConfig: CertificateConfig }>(`/api/admin/template${query}`, {
+    const res = await safeFetchJson<any>(`/api/admin/template${query}`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
-    if (res.success && res.data?.templateConfig) {
-      return res.data.templateConfig;
+    if (res.success && res.data) {
+      const cfg = res.data.templateConfig || (res.data.id ? res.data : null);
+      if (cfg) {
+        localDb.saveTemplateConfig(cfg, false);
+        return cfg;
+      }
     }
     return localDb.getTemplateConfig(eventId);
   },
@@ -323,7 +345,7 @@ export const apiClient = {
     config: CertificateConfig,
     applyToAll: boolean = true
   ): Promise<CertificateConfig> {
-    const res = await safeFetchJson<{ templateConfig: CertificateConfig }>('/api/admin/template', {
+    const res = await safeFetchJson<any>('/api/admin/template', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -345,8 +367,12 @@ export const apiClient = {
       },
       applyToAll
     );
-    if (res.success && res.data?.templateConfig) {
-      return res.data.templateConfig;
+    if (res.success && res.data) {
+      const cfg = res.data.templateConfig || (res.data.id ? res.data : null);
+      if (cfg) {
+        localDb.saveTemplateConfig(cfg, applyToAll);
+        return cfg;
+      }
     }
     return localSaved;
   },

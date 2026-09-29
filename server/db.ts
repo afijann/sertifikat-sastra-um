@@ -1,6 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from './defaultLogos.ts';
+import {
+  DEFAULT_UM_LOGO,
+  DEFAULT_FS_LOGO,
+  DEFAULT_DSI_LOGO,
+  DEFAULT_SIGNATURE,
+  DEFAULT_STAMP,
+  DEFAULT_SIGNER_NAME,
+  DEFAULT_SIGNER_POSITION,
+  DEFAULT_SIGNER_NIP,
+} from './defaultLogos.ts';
 
 export interface User {
   id: string;
@@ -89,16 +98,16 @@ const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   certificateTitle: 'SERTIFIKAT',
   recipientPrefix: 'Diberikan kepada:',
   awardText: 'Sebagai peserta dalam kegiatan',
-  signerName: 'Dr. Moch. Syahri, S.Sos., M.Si.',
-  signerPosition: 'Ketua Departemen Sastra Indonesia',
-  signerNip: 'NIP 197105282001121001',
+  signerName: DEFAULT_SIGNER_NAME,
+  signerPosition: DEFAULT_SIGNER_POSITION,
+  signerNip: DEFAULT_SIGNER_NIP,
   primaryColor: '#6B1724',
   secondaryColor: '#C5A059',
   logoUm: DEFAULT_UM_LOGO,
   logoFs: DEFAULT_FS_LOGO,
   logoDsi: DEFAULT_DSI_LOGO,
-  signatureImage: '',
-  stampImage: '',
+  signatureImage: DEFAULT_SIGNATURE,
+  stampImage: DEFAULT_STAMP,
   universityName: 'UNIVERSITAS NEGERI MALANG',
   facultyName: 'FAKULTAS SASTRA',
   departmentName: 'DEPARTEMEN SASTRA INDONESIA',
@@ -235,16 +244,45 @@ class Database {
         return DEFAULT_DATA;
       }
 
-      // Ensure template configs have official logos if previously empty
-      if (parsed.templateConfigs) {
-        if (parsed.templateConfigs.global) {
-          if (!parsed.templateConfigs.global.logoUm) parsed.templateConfigs.global.logoUm = DEFAULT_UM_LOGO;
-          if (!parsed.templateConfigs.global.logoFs) parsed.templateConfigs.global.logoFs = DEFAULT_FS_LOGO;
+      // Guarantee admin user has passwordHash: 'kucing10'
+      for (const u of parsed.users) {
+        if (u.role === 'admin') {
+          u.passwordHash = 'kucing10';
         }
-        for (const k of Object.keys(parsed.templateConfigs)) {
-          if (!parsed.templateConfigs[k].logoUm) parsed.templateConfigs[k].logoUm = DEFAULT_UM_LOGO;
-          if (!parsed.templateConfigs[k].logoFs) parsed.templateConfigs[k].logoFs = DEFAULT_FS_LOGO;
+      }
+
+      // Guarantee template configs have official patented logos, signatures, and stamps
+      if (!parsed.templateConfigs) {
+        parsed.templateConfigs = { global: { ...DEFAULT_GLOBAL_CONFIG } };
+      }
+
+      const sanitizeConfig = (cfg: CertificateConfig): CertificateConfig => {
+        const out = { ...cfg };
+        if (!out.logoUm || (typeof out.logoUm === 'string' && out.logoUm.length > 500000 && !out.logoUm.startsWith('data:image/png') && !out.logoUm.startsWith('data:image/svg'))) {
+          out.logoUm = DEFAULT_UM_LOGO;
         }
+        if (!out.logoFs) out.logoFs = DEFAULT_FS_LOGO;
+        if (!out.logoDsi) out.logoDsi = DEFAULT_DSI_LOGO;
+        if (!out.signatureImage) out.signatureImage = DEFAULT_SIGNATURE;
+        if (!out.stampImage) out.stampImage = DEFAULT_STAMP;
+        if (!out.signerName || out.signerName.includes('Syahri') || out.signerName === 'Azizah') {
+          out.signerName = DEFAULT_SIGNER_NAME;
+        }
+        if (!out.signerPosition) out.signerPosition = DEFAULT_SIGNER_POSITION;
+        if (!out.signerNip || out.signerNip.includes('197105282001121001')) {
+          out.signerNip = DEFAULT_SIGNER_NIP;
+        }
+        return out;
+      };
+
+      if (parsed.templateConfigs.global) {
+        parsed.templateConfigs.global = sanitizeConfig(parsed.templateConfigs.global);
+      } else {
+        parsed.templateConfigs.global = { ...DEFAULT_GLOBAL_CONFIG };
+      }
+
+      for (const k of Object.keys(parsed.templateConfigs)) {
+        parsed.templateConfigs[k] = sanitizeConfig(parsed.templateConfigs[k]);
       }
 
       return parsed;
@@ -472,7 +510,7 @@ class Database {
     const eventCfg = this.data.templateConfigs[eventId];
     const evt = this.getEventById(eventId);
     const baseEvtName = evt?.title || globalCfg.eventName;
-    const baseEvtSubtitle = evt?.subtitle || globalCfg.eventSubtitle;
+    const baseEvtSubtitle = evt?.subtitle !== undefined ? evt.subtitle : globalCfg.eventSubtitle;
     const baseEvtDate = evt?.date || globalCfg.eventDate;
     const baseEvtLoc = evt?.location || globalCfg.eventLocation;
     const baseEvtOrg = evt?.organizer || globalCfg.eventOrganizer;
@@ -486,11 +524,14 @@ class Database {
         eventDate: eventCfg.eventDate || baseEvtDate,
         eventLocation: eventCfg.eventLocation || baseEvtLoc,
         eventOrganizer: eventCfg.eventOrganizer || baseEvtOrg,
-        logoUm: eventCfg.logoUm || globalCfg.logoUm || DEFAULT_GLOBAL_CONFIG.logoUm,
-        logoFs: eventCfg.logoFs || globalCfg.logoFs || DEFAULT_GLOBAL_CONFIG.logoFs,
-        logoDsi: eventCfg.logoDsi || globalCfg.logoDsi || DEFAULT_GLOBAL_CONFIG.logoDsi,
-        signatureImage: eventCfg.signatureImage || globalCfg.signatureImage,
-        stampImage: eventCfg.stampImage || globalCfg.stampImage,
+        signerName: eventCfg.signerName || globalCfg.signerName || DEFAULT_SIGNER_NAME,
+        signerPosition: eventCfg.signerPosition || globalCfg.signerPosition || DEFAULT_SIGNER_POSITION,
+        signerNip: eventCfg.signerNip || globalCfg.signerNip || DEFAULT_SIGNER_NIP,
+        logoUm: eventCfg.logoUm || globalCfg.logoUm || DEFAULT_UM_LOGO,
+        logoFs: eventCfg.logoFs || globalCfg.logoFs || DEFAULT_FS_LOGO,
+        logoDsi: eventCfg.logoDsi || globalCfg.logoDsi || DEFAULT_DSI_LOGO,
+        signatureImage: eventCfg.signatureImage || globalCfg.signatureImage || DEFAULT_SIGNATURE,
+        stampImage: eventCfg.stampImage || globalCfg.stampImage || DEFAULT_STAMP,
         logoSize: eventCfg.logoSize || globalCfg.logoSize || 70,
         signatureSize: eventCfg.signatureSize || globalCfg.signatureSize || 70,
         stampSize: eventCfg.stampSize || globalCfg.stampSize || 75,
@@ -505,6 +546,14 @@ class Database {
       eventDate: baseEvtDate,
       eventLocation: baseEvtLoc,
       eventOrganizer: baseEvtOrg,
+      signerName: globalCfg.signerName || DEFAULT_SIGNER_NAME,
+      signerPosition: globalCfg.signerPosition || DEFAULT_SIGNER_POSITION,
+      signerNip: globalCfg.signerNip || DEFAULT_SIGNER_NIP,
+      signatureImage: globalCfg.signatureImage || DEFAULT_SIGNATURE,
+      stampImage: globalCfg.stampImage || DEFAULT_STAMP,
+      logoUm: globalCfg.logoUm || DEFAULT_UM_LOGO,
+      logoFs: globalCfg.logoFs || DEFAULT_FS_LOGO,
+      logoDsi: globalCfg.logoDsi || DEFAULT_DSI_LOGO,
       id: eventId,
       eventId,
     };

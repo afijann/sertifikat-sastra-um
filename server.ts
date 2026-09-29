@@ -278,7 +278,7 @@ app.get('/api/admin/events', requireAdmin, (req, res) => {
         participantCount: participants.length,
       };
     });
-    res.json(enriched);
+    res.json({ success: true, events: enriched, count: enriched.length });
   } catch (error: any) {
     res.status(500).json({ error: 'Gagal mengambil daftar kegiatan.' });
   }
@@ -316,7 +316,7 @@ app.post('/api/admin/events', requireAdmin, (req, res) => {
       slug,
     });
 
-    res.status(201).json(newEvent);
+    res.status(201).json({ success: true, event: newEvent, ...newEvent });
   } catch (error: any) {
     console.error('Error creating event:', error);
     res.status(500).json({ error: 'Gagal membuat kegiatan baru.' });
@@ -335,6 +335,7 @@ app.get('/api/admin/events/:id', requireAdmin, (req, res) => {
     const participants = db.getAllParticipants(id);
 
     res.json({
+      success: true,
       event,
       templateConfig,
       participantCount: participants.length,
@@ -366,7 +367,7 @@ app.put('/api/admin/events/:id', requireAdmin, (req, res) => {
       return;
     }
 
-    res.json(updated);
+    res.json({ success: true, event: updated, ...updated });
   } catch (error: any) {
     res.status(500).json({ error: 'Gagal memperbarui kegiatan.' });
   }
@@ -380,7 +381,7 @@ app.post('/api/admin/events/:id/toggle-status', requireAdmin, (req, res) => {
       res.status(404).json({ error: 'Kegiatan tidak ditemukan.' });
       return;
     }
-    res.json(updated);
+    res.json({ success: true, event: updated, ...updated });
   } catch (error: any) {
     res.status(500).json({ error: 'Gagal mengubah status kegiatan.' });
   }
@@ -423,7 +424,7 @@ app.get('/api/admin/participants', requireAdmin, (req, res) => {
       eventDate: eventsMap.get(p.eventId)?.date || '',
     }));
 
-    res.json(enriched);
+    res.json({ success: true, participants: enriched, list: enriched, count: enriched.length });
   } catch (error: any) {
     res.status(500).json({ error: 'Gagal memuat data peserta.' });
   }
@@ -471,11 +472,8 @@ app.delete('/api/admin/participants/:id', requireAdmin, (req, res) => {
 app.get('/api/admin/template', requireAdmin, (req, res) => {
   try {
     const eventId = req.query.eventId as string | undefined;
-    if (eventId) {
-      res.json(db.getEventTemplateConfig(eventId));
-    } else {
-      res.json(db.getGlobalTemplateConfig());
-    }
+    const config = eventId ? db.getEventTemplateConfig(eventId) : db.getGlobalTemplateConfig();
+    res.json({ success: true, templateConfig: config, ...config });
   } catch (error: any) {
     res.status(500).json({ error: 'Gagal memuat konfigurasi template.' });
   }

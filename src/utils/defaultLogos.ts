@@ -213,10 +213,80 @@ export function svgToDataUri(svgString: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
 }
 
+// 4. OFFICIAL DIGITAL SIGNATURE (TANDA TANGAN RESMI KETUA DEPARTEMEN)
+// Patented signature for Dr. Azizatuz Zahro', M.Pd.
+const SVG_SIGNATURE_AZIZAH = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 130" width="320" height="130">
+  <g fill="none" stroke="#0F172A" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main Initial A flourish with high upward loop -->
+    <path d="M 45,95 C 40,75 52,25 72,15 C 88,8 96,25 90,48 C 82,75 65,105 55,112 C 48,118 42,112 50,96 C 62,70 105,42 125,55 C 135,62 130,80 118,88 C 105,96 95,90 102,78 C 112,62 135,50 152,58 C 165,65 160,82 150,90" stroke-width="2.6"/>
+    <!-- Cursive name body z-i-z-a-t-u-z -->
+    <path d="M 148,88 C 158,74 175,60 188,72 C 196,80 186,96 178,102 C 170,108 165,116 172,118 C 182,120 195,95 205,75 C 215,55 224,42 226,38" stroke-width="2.2"/>
+    <!-- Ascender loop and cross -->
+    <path d="M 226,38 C 228,32 236,30 236,38 C 236,52 225,75 220,86 C 228,78 242,66 254,74 C 262,80 258,92 250,95 C 260,86 272,76 284,82 C 290,85 288,94 282,96" stroke-width="2.4"/>
+    <path d="M 216,56 Q 238,52 250,54" stroke-width="2.0"/>
+    <!-- Flourishing paraph / dynamic underscoring with elegant swoosh -->
+    <path d="M 38,105 C 80,118 160,122 230,115 C 265,111 295,102 308,94 C 314,90 312,85 304,87 C 285,92 240,104 185,108 C 140,111 75,108 55,102" stroke-width="2.2"/>
+    <!-- Accent dot -->
+    <circle cx="205" cy="48" r="1.5" fill="#0F172A"/>
+  </g>
+</svg>`;
+
+// 5. OFFICIAL ACADEMIC STAMP (STEMPEL RESMI UNIVERSITAS NEGERI MALANG - FAKULTAS SASTRA)
+// Patented official purple-blue academic seal of Departemen Sastra Indonesia
+const SVG_STAMP_DSI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <path id="stampTextTop" d="M 25,100 A 75,75 0 0,1 175,100" fill="none"/>
+    <path id="stampTextBottom" d="M 175,100 A 75,75 0 0,1 25,100" fill="none"/>
+  </defs>
+  <!-- Outer double ring with authentic ink opacity -->
+  <g stroke="#2E3192" fill="none" opacity="0.9">
+    <circle cx="100" cy="100" r="95" stroke-width="3.2"/>
+    <circle cx="100" cy="100" r="89" stroke-width="1.2"/>
+    <circle cx="100" cy="100" r="63" stroke-width="1.8"/>
+    <circle cx="100" cy="100" r="60" stroke-width="0.8"/>
+  </g>
+  <!-- Circular text in stamp ink -->
+  <!-- Top Arc: UNIVERSITAS NEGERI MALANG -->
+  <text font-family="'Times New Roman', serif, Arial" font-size="8.4" font-weight="bold" fill="#2E3192" letter-spacing="1" opacity="0.92">
+    <textPath href="#stampTextTop" startOffset="50%" text-anchor="middle">
+      UNIVERSITAS NEGERI MALANG
+    </textPath>
+  </text>
+  <!-- Bottom Arc: ★ FAKULTAS SASTRA ★ -->
+  <text font-family="'Times New Roman', serif, Arial" font-size="8.8" font-weight="bold" fill="#2E3192" letter-spacing="1.2" opacity="0.92">
+    <textPath href="#stampTextBottom" startOffset="50%" text-anchor="middle">
+      ★ FAKULTAS SASTRA ★
+    </textPath>
+  </text>
+  <!-- Center: DEPARTEMEN SASTRA INDONESIA -->
+  <g text-anchor="middle" font-family="'Times New Roman', serif, Arial" fill="#2E3192" opacity="0.94">
+    <!-- Star divider top of center -->
+    <path d="M 100,72 L 102,77 L 107,77 L 103,80 L 105,85 L 100,82 L 95,85 L 97,80 L 93,77 L 98,77 Z" fill="#2E3192"/>
+    <text x="100" y="96" font-size="8.5" font-weight="bold" letter-spacing="0.5">
+      DEPARTEMEN
+    </text>
+    <line x1="68" y1="101" x2="132" y2="101" stroke="#2E3192" stroke-width="1.2"/>
+    <text x="100" y="113" font-size="8" font-weight="bold" letter-spacing="0.8">
+      SASTRA INDONESIA
+    </text>
+    <!-- Little feather / kalam in bottom of center -->
+    <path d="M 92,126 C 96,121 100,120 108,122 C 104,124 100,126 96,128 Z" fill="#2E3192"/>
+    <line x1="92" y1="128" x2="108" y2="120" stroke="#2E3192" stroke-width="0.8"/>
+  </g>
+</svg>`;
+
 export const DEFAULT_UM_SVG = OFFICIAL_UM_LOGO_DATA_URI;
 export const DEFAULT_FS_SVG = svgToDataUri(SVG_LOGO_FS);
 export const DEFAULT_DSI_SVG = svgToDataUri(SVG_LOGO_DSI);
+export const DEFAULT_SIGNATURE_SVG = svgToDataUri(SVG_SIGNATURE_AZIZAH);
+export const DEFAULT_STAMP_SVG = svgToDataUri(SVG_STAMP_DSI);
 
 export const DEFAULT_UM_LOGO = OFFICIAL_UM_LOGO_DATA_URI;
 export const DEFAULT_FS_LOGO = DEFAULT_FS_SVG;
 export const DEFAULT_DSI_LOGO = DEFAULT_DSI_SVG;
+export const DEFAULT_SIGNATURE = DEFAULT_SIGNATURE_SVG;
+export const DEFAULT_STAMP = DEFAULT_STAMP_SVG;
+
+export const DEFAULT_SIGNER_NAME = "Dr. Azizatuz Zahro', M.Pd.";
+export const DEFAULT_SIGNER_POSITION = 'Ketua Departemen Sastra Indonesia';
+export const DEFAULT_SIGNER_NIP = 'NIP 197310092003122001';

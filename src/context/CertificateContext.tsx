@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { CertificateConfig, EventItem } from '../types';
-import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from '../utils/defaultLogos';
+import {
+  DEFAULT_UM_LOGO,
+  DEFAULT_FS_LOGO,
+  DEFAULT_DSI_LOGO,
+  DEFAULT_SIGNATURE,
+  DEFAULT_STAMP,
+  DEFAULT_SIGNER_NAME,
+  DEFAULT_SIGNER_POSITION,
+  DEFAULT_SIGNER_NIP,
+} from '../utils/defaultLogos';
 import { apiClient } from '../utils/apiClient';
 
 export const INITIAL_CERTIFICATE_CONFIG: CertificateConfig = {
@@ -8,24 +17,24 @@ export const INITIAL_CERTIFICATE_CONFIG: CertificateConfig = {
   certificateTitle: 'SERTIFIKAT',
   recipientPrefix: 'Diberikan kepada:',
   awardText: 'Sebagai peserta dalam kegiatan',
-  signerName: 'Dr. Moch. Syahri, S.Sos., M.Si.',
-  signerPosition: 'Ketua Departemen Sastra Indonesia',
-  signerNip: 'NIP 197105282001121001',
+  signerName: DEFAULT_SIGNER_NAME,
+  signerPosition: DEFAULT_SIGNER_POSITION,
+  signerNip: DEFAULT_SIGNER_NIP,
   primaryColor: '#6B1724',
   secondaryColor: '#C5A059',
   logoUm: DEFAULT_UM_LOGO,
   logoFs: DEFAULT_FS_LOGO,
   logoDsi: DEFAULT_DSI_LOGO,
-  signatureImage: '',
-  stampImage: '',
+  signatureImage: DEFAULT_SIGNATURE,
+  stampImage: DEFAULT_STAMP,
   universityName: 'UNIVERSITAS NEGERI MALANG',
   facultyName: 'FAKULTAS SASTRA',
   departmentName: 'DEPARTEMEN SASTRA INDONESIA',
-  eventName: 'Seminar Nasional Perpustakaan dan Informasi 2026',
-  eventSubtitle: 'Mahasiswa Departemen Sastra Indonesia',
-  eventDate: '21 September 2026',
-  eventLocation: 'Aula Gedung D8 FS Universitas Negeri Malang',
-  eventOrganizer: 'Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang',
+  eventName: '',
+  eventSubtitle: '',
+  eventDate: '',
+  eventLocation: '',
+  eventOrganizer: '',
   fontSizeTitle: 32,
   fontSizeName: 30,
   fontSizeBody: 14,
@@ -109,14 +118,10 @@ export const CertificateProvider: React.FC<CertificateProviderProps> = ({
         ? await apiClient.getEventBySlug(slugOrId)
         : await apiClient.getActiveEvent();
 
-      let mergedConfig: CertificateConfig = { ...INITIAL_CERTIFICATE_CONFIG };
-
-      if (data.templateConfig) {
-        mergedConfig = {
-          ...mergedConfig,
-          ...data.templateConfig,
-        };
-      }
+      let mergedConfig: CertificateConfig = {
+        ...INITIAL_CERTIFICATE_CONFIG,
+        ...(data.templateConfig || {}),
+      };
 
       if (data.event) {
         setActiveEvent(data.event);
@@ -124,11 +129,11 @@ export const CertificateProvider: React.FC<CertificateProviderProps> = ({
         mergedConfig = {
           ...mergedConfig,
           eventId: data.event.id,
-          eventName: mergedConfig.eventName || data.event.title,
-          eventSubtitle: mergedConfig.eventSubtitle !== undefined ? mergedConfig.eventSubtitle : data.event.subtitle,
-          eventDate: mergedConfig.eventDate || data.event.date,
-          eventLocation: mergedConfig.eventLocation || data.event.location,
-          eventOrganizer: mergedConfig.eventOrganizer || data.event.organizer,
+          eventName: data.templateConfig?.eventName || data.event.title,
+          eventSubtitle: data.templateConfig?.eventSubtitle !== undefined ? data.templateConfig.eventSubtitle : (data.event.subtitle || ''),
+          eventDate: data.templateConfig?.eventDate || data.event.date,
+          eventLocation: data.templateConfig?.eventLocation || data.event.location,
+          eventOrganizer: data.templateConfig?.eventOrganizer || data.event.organizer,
         };
       }
 

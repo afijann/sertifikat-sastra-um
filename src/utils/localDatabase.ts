@@ -1,5 +1,14 @@
 import { EventItem, Participant, CertificateConfig, DashboardStats, AdminUser } from '../types';
-import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from './defaultLogos';
+import {
+  DEFAULT_UM_LOGO,
+  DEFAULT_FS_LOGO,
+  DEFAULT_DSI_LOGO,
+  DEFAULT_SIGNATURE,
+  DEFAULT_STAMP,
+  DEFAULT_SIGNER_NAME,
+  DEFAULT_SIGNER_POSITION,
+  DEFAULT_SIGNER_NIP,
+} from './defaultLogos';
 
 const STORAGE_KEY = 'sastra_um_certificate_database_v3';
 
@@ -15,16 +24,16 @@ export const DEFAULT_GLOBAL_CONFIG: CertificateConfig = {
   certificateTitle: 'SERTIFIKAT',
   recipientPrefix: 'Diberikan kepada:',
   awardText: 'Sebagai peserta dalam kegiatan',
-  signerName: 'Dr. Moch. Syahri, S.Sos., M.Si.',
-  signerPosition: 'Ketua Departemen Sastra Indonesia',
-  signerNip: 'NIP 197105282001121001',
+  signerName: DEFAULT_SIGNER_NAME,
+  signerPosition: DEFAULT_SIGNER_POSITION,
+  signerNip: DEFAULT_SIGNER_NIP,
   primaryColor: '#6B1724',
   secondaryColor: '#C5A059',
   logoUm: DEFAULT_UM_LOGO,
   logoFs: DEFAULT_FS_LOGO,
   logoDsi: DEFAULT_DSI_LOGO,
-  signatureImage: '',
-  stampImage: '',
+  signatureImage: DEFAULT_SIGNATURE,
+  stampImage: DEFAULT_STAMP,
   universityName: 'UNIVERSITAS NEGERI MALANG',
   facultyName: 'FAKULTAS SASTRA',
   departmentName: 'DEPARTEMEN SASTRA INDONESIA',

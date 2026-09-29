@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { CertificateConfig, EventItem, Participant } from '../../types';
 import { CertificateCanvas } from '../../components/CertificateCanvas';
 import { apiClient } from '../../utils/apiClient';
-import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from '../../utils/defaultLogos';
+import {
+  DEFAULT_UM_LOGO,
+  DEFAULT_FS_LOGO,
+  DEFAULT_DSI_LOGO,
+  DEFAULT_SIGNATURE,
+  DEFAULT_STAMP,
+  DEFAULT_SIGNER_NAME,
+  DEFAULT_SIGNER_POSITION,
+  DEFAULT_SIGNER_NIP,
+} from '../../utils/defaultLogos';
 import { generatePDF, downloadCertificatePdf } from '../../utils/pdfGenerator';
 import { useCertificate } from '../../context/CertificateContext';
 import { 
@@ -130,11 +139,19 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
       const matched = key !== 'global' ? events.find(e => e.id === key) : events.find(e => e.status === 'active') || events[0];
       setConfig({
         ...data,
-        eventName: data.eventName || matched?.title || 'Workshop Literasi Informasi 2026',
+        eventName: data.eventName || matched?.title || '',
         eventSubtitle: data.eventSubtitle !== undefined ? data.eventSubtitle : (matched?.subtitle || ''),
-        eventDate: data.eventDate || matched?.date || '21 September 2026',
+        eventDate: data.eventDate || matched?.date || '',
         eventLocation: data.eventLocation || matched?.location || 'Universitas Negeri Malang',
         eventOrganizer: data.eventOrganizer || matched?.organizer || 'Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang',
+        signerName: data.signerName || DEFAULT_SIGNER_NAME,
+        signerPosition: data.signerPosition || DEFAULT_SIGNER_POSITION,
+        signerNip: data.signerNip || DEFAULT_SIGNER_NIP,
+        signatureImage: data.signatureImage || DEFAULT_SIGNATURE,
+        stampImage: data.stampImage || DEFAULT_STAMP,
+        logoUm: data.logoUm || DEFAULT_UM_LOGO,
+        logoFs: data.logoFs || DEFAULT_FS_LOGO,
+        logoDsi: data.logoDsi || DEFAULT_DSI_LOGO,
       });
     } catch (err) {
       console.error(err);
@@ -183,7 +200,9 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       if (reader.result) {
-        updateCertificateConfig({ [field]: reader.result as string });
+        const val = reader.result as string;
+        setConfig(prev => ({ ...prev, [field]: val }));
+        updateCertificateConfig({ [field]: val });
       }
     };
     reader.readAsDataURL(file);
@@ -191,17 +210,20 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
   };
 
   const handleRemoveImage = (field: 'logoUm' | 'logoFs' | 'logoDsi' | 'signatureImage' | 'stampImage') => {
+    setConfig(prev => ({ ...prev, [field]: '' }));
     updateCertificateConfig({ [field]: '' });
   };
 
   const handleClearAllLogos = () => {
     if (window.confirm('Hapus semua file logo dan sembunyikan kotak placeholder otomatis?')) {
-      updateCertificateConfig({
+      const cleared = {
         logoUm: '',
         logoFs: '',
         logoDsi: '',
         hideLogoPlaceholders: true,
-      });
+      };
+      setConfig(prev => ({ ...prev, ...cleared }));
+      updateCertificateConfig(cleared);
     }
   };
 
