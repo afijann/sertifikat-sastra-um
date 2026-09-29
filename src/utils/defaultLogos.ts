@@ -1,5 +1,7 @@
+import { OFFICIAL_UM_LOGO_DATA_URI } from './officialUmLogoData';
+
 /**
- * Official Vector / SVG Logos for Universitas Negeri Malang (UM),
+ * Official Logos for Universitas Negeri Malang (UM),
  * Fakultas Sastra (FS), and Departemen Sastra Indonesia (DSI).
  * 
  * Embedded directly as Data URIs so they load instantaneously everywhere,
@@ -7,7 +9,9 @@
  * and guarantee crystal-sharp rendering on all devices.
  */
 
-// 1. LOGO UNIVERSITAS NEGERI MALANG (UM) - Official Circular Academic Seal
+// 1. LOGO UNIVERSITAS NEGERI MALANG (UM) - Official "um Excellence in Learning Innovation"
+export const DEFAULT_UM_PNG = OFFICIAL_UM_LOGO_DATA_URI;
+
 const SVG_LOGO_UM = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
   <defs>
     <radialGradient id="umGoldGrad" cx="50%" cy="50%" r="50%">
@@ -209,10 +213,10 @@ export function svgToDataUri(svgString: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
 }
 
-export const DEFAULT_UM_SVG = svgToDataUri(SVG_LOGO_UM);
+export const DEFAULT_UM_SVG = OFFICIAL_UM_LOGO_DATA_URI;
 export const DEFAULT_FS_SVG = svgToDataUri(SVG_LOGO_FS);
 export const DEFAULT_DSI_SVG = svgToDataUri(SVG_LOGO_DSI);
 
-export const DEFAULT_UM_LOGO = '/assets/logo-um.png';
-export const DEFAULT_FS_LOGO = '/assets/logo-fs-um.svg';
+export const DEFAULT_UM_LOGO = OFFICIAL_UM_LOGO_DATA_URI;
+export const DEFAULT_FS_LOGO = DEFAULT_FS_SVG;
 export const DEFAULT_DSI_LOGO = DEFAULT_DSI_SVG;

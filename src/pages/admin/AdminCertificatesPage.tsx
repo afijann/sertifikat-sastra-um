@@ -86,11 +86,11 @@ export const AdminCertificatesPage: React.FC<AdminCertificatesPageProps> = ({
     if (!activeParticipant || !activeEvent || !activeTemplate) return;
     setDownloading(true);
     try {
-      await downloadCertificatePdf({
+      await downloadCertificatePdf(activeTemplate, {
         elementId: 'cert-gallery-modal-canvas',
         participant: activeParticipant,
         event: activeEvent,
-        config: activeTemplate,
+        currentConfig: activeTemplate,
       });
     } catch (err) {
       console.error(err);

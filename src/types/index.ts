@@ -29,6 +29,11 @@ export interface Participant {
 export interface CertificateConfig {
   id: string;
   eventId?: string;
+  eventName?: string;
+  eventSubtitle?: string;
+  eventDate?: string;
+  eventLocation?: string;
+  eventOrganizer?: string;
   certificateTitle: string;
   recipientPrefix: string;
   awardText: string;

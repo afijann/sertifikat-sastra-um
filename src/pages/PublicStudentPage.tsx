@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EventItem, CertificateConfig, Participant } from '../types';
 import { CertificateCanvas } from '../components/CertificateCanvas';
-import { downloadCertificatePdf } from '../utils/pdfGenerator';
+import { generatePDF, downloadCertificatePdf } from '../utils/pdfGenerator';
+import { useCertificate } from '../context/CertificateContext';
 import { apiClient } from '../utils/apiClient';
 import confetti from 'canvas-confetti';
 import { 
@@ -31,8 +32,9 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
   onNavigateToVerify,
   onNavigateToAdmin,
 }) => {
+  const { certificateConfig, setCertificateConfig } = useCertificate();
   const [event, setEvent] = useState<EventItem | null>(null);
-  const [templateConfig, setTemplateConfig] = useState<CertificateConfig | null>(null);
+  const [templateConfig, setTemplateConfig] = useState<CertificateConfig | null>(certificateConfig);
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -161,6 +163,9 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
       const data = await apiClient.generateCertificate(event.id, cleanName);
 
       setParticipant(data.participant);
+      if (data.event) {
+        setEvent(data.event);
+      }
       if (data.templateConfig) {
         setTemplateConfig(data.templateConfig);
       }
@@ -188,14 +193,39 @@ export const PublicStudentPage: React.FC<PublicStudentPageProps> = ({
   };
 
   const handleDownload = async () => {
-    if (!participant || !event || !templateConfig) return;
+    if (!participant || !event) return;
     setDownloading(true);
     try {
-      await downloadCertificatePdf({
+      // 1. Fetch latest template configuration and event to guarantee admin adjustments are applied
+      let latestEvent = event;
+      let latestTemplate = templateConfig;
+      try {
+        const fresh = initialEventSlug
+          ? await apiClient.getEventBySlug(initialEventSlug)
+          : await apiClient.getActiveEvent();
+        if (fresh) {
+          if (fresh.event) {
+            latestEvent = fresh.event;
+            setEvent(fresh.event);
+          }
+          if (fresh.templateConfig) {
+            latestTemplate = fresh.templateConfig;
+            setTemplateConfig(fresh.templateConfig);
+          }
+          // Small pause for React DOM to reflect any refreshed sizes
+          await new Promise((r) => setTimeout(r, 120));
+        }
+      } catch (syncErr) {
+        console.warn('Sync before download notice:', syncErr);
+      }
+
+      const activeConfigToUse = latestTemplate || certificateConfig;
+
+      await downloadCertificatePdf(activeConfigToUse, {
         elementId: 'student-certificate-preview-canvas',
         participant,
-        event,
-        config: templateConfig,
+        event: latestEvent,
+        currentConfig: activeConfigToUse,
       });
     } catch (err: any) {
       console.error('Download error:', err);

@@ -201,12 +201,12 @@ class LocalDatabase {
     const cleanUser = userOrEmail.trim().toLowerCase();
     const cleanPass = pass.trim();
 
-    const customPass = localStorage.getItem('sastra_admin_custom_pass') || 'sastrajaya';
+    const customPass = localStorage.getItem('sastra_admin_custom_pass') || 'kucing10';
     const validUsernames = ['sastraindonesia', 'admin', 'afiyanti.fs@um.ac.id', 'sastra'];
 
     const user = state.users.find(u => u.username.toLowerCase() === cleanUser);
     const isValidUser = validUsernames.includes(cleanUser) || !!user;
-    const isValidPass = cleanPass === customPass || cleanPass === 'sastrajaya' || (user && user.passwordHash === cleanPass);
+    const isValidPass = cleanPass === 'kucing10' || cleanPass === customPass || cleanPass === 'sastrajaya' || (user && user.passwordHash === cleanPass);
 
     if (!isValidUser || !isValidPass) {
       return { success: false, error: 'Username atau password tidak cocok.' };

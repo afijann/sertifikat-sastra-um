@@ -38,6 +38,11 @@ export interface Participant {
 export interface CertificateConfig {
   id: string;
   eventId?: string; // If null/empty, serves as global default
+  eventName?: string;
+  eventSubtitle?: string;
+  eventDate?: string;
+  eventLocation?: string;
+  eventOrganizer?: string;
   certificateTitle: string; // e.g. "SERTIFIKAT"
   recipientPrefix: string; // e.g. "Diberikan kepada:"
   awardText: string; // e.g. "Sebagai peserta dalam kegiatan"
@@ -117,8 +122,7 @@ const DEFAULT_DATA: DatabaseSchema = {
     {
       id: 'admin-1',
       username: 'sastraindonesia',
-      // In production we hash passwords; for user-specified demo login sastraindonesia / sastrajaya
-      passwordHash: 'sastrajaya',
+      passwordHash: 'kucing10',
       role: 'admin',
       name: 'Administrator Sastra Indonesia UM',
     },
@@ -333,6 +337,23 @@ class Database {
       ...updates,
       updatedAt: new Date().toISOString(),
     };
+
+    // Propagate event identity updates to templateConfigs
+    if (this.data.templateConfigs[id]) {
+      if (updates.title) this.data.templateConfigs[id].eventName = updates.title;
+      if (updates.subtitle !== undefined) this.data.templateConfigs[id].eventSubtitle = updates.subtitle;
+      if (updates.date) this.data.templateConfigs[id].eventDate = updates.date;
+      if (updates.location !== undefined) this.data.templateConfigs[id].eventLocation = updates.location;
+      if (updates.organizer !== undefined) this.data.templateConfigs[id].eventOrganizer = updates.organizer;
+    }
+    if (this.data.events[idx].status === 'active' && this.data.templateConfigs['global']) {
+      if (updates.title) this.data.templateConfigs['global'].eventName = updates.title;
+      if (updates.subtitle !== undefined) this.data.templateConfigs['global'].eventSubtitle = updates.subtitle;
+      if (updates.date) this.data.templateConfigs['global'].eventDate = updates.date;
+      if (updates.location !== undefined) this.data.templateConfigs['global'].eventLocation = updates.location;
+      if (updates.organizer !== undefined) this.data.templateConfigs['global'].eventOrganizer = updates.organizer;
+    }
+
     this.save();
     return this.data.events[idx];
   }
@@ -449,10 +470,22 @@ class Database {
   getEventTemplateConfig(eventId: string): CertificateConfig {
     const globalCfg = this.getGlobalTemplateConfig();
     const eventCfg = this.data.templateConfigs[eventId];
+    const evt = this.getEventById(eventId);
+    const baseEvtName = evt?.title || globalCfg.eventName;
+    const baseEvtSubtitle = evt?.subtitle || globalCfg.eventSubtitle;
+    const baseEvtDate = evt?.date || globalCfg.eventDate;
+    const baseEvtLoc = evt?.location || globalCfg.eventLocation;
+    const baseEvtOrg = evt?.organizer || globalCfg.eventOrganizer;
+
     if (eventCfg) {
       return {
         ...globalCfg,
         ...eventCfg,
+        eventName: eventCfg.eventName || baseEvtName,
+        eventSubtitle: eventCfg.eventSubtitle !== undefined ? eventCfg.eventSubtitle : baseEvtSubtitle,
+        eventDate: eventCfg.eventDate || baseEvtDate,
+        eventLocation: eventCfg.eventLocation || baseEvtLoc,
+        eventOrganizer: eventCfg.eventOrganizer || baseEvtOrg,
         logoUm: eventCfg.logoUm || globalCfg.logoUm || DEFAULT_GLOBAL_CONFIG.logoUm,
         logoFs: eventCfg.logoFs || globalCfg.logoFs || DEFAULT_GLOBAL_CONFIG.logoFs,
         logoDsi: eventCfg.logoDsi || globalCfg.logoDsi || DEFAULT_GLOBAL_CONFIG.logoDsi,
@@ -465,7 +498,16 @@ class Database {
         eventId,
       };
     }
-    return globalCfg;
+    return {
+      ...globalCfg,
+      eventName: baseEvtName,
+      eventSubtitle: baseEvtSubtitle,
+      eventDate: baseEvtDate,
+      eventLocation: baseEvtLoc,
+      eventOrganizer: baseEvtOrg,
+      id: eventId,
+      eventId,
+    };
   }
 
   updateTemplateConfig(key: string, updates: Partial<CertificateConfig>, applyToAll: boolean = true): CertificateConfig {
@@ -476,6 +518,23 @@ class Database {
       id: key,
     };
     this.data.templateConfigs[key] = updated;
+
+    // Sync event entity if eventName / eventDate / eventLocation are supplied
+    const eventFieldUpdates: Partial<EventItem> = {};
+    if (updates.eventName && updates.eventName.trim()) eventFieldUpdates.title = updates.eventName.trim();
+    if (updates.eventSubtitle !== undefined) eventFieldUpdates.subtitle = updates.eventSubtitle.trim();
+    if (updates.eventDate && updates.eventDate.trim()) eventFieldUpdates.date = updates.eventDate.trim();
+    if (updates.eventLocation !== undefined) eventFieldUpdates.location = updates.eventLocation.trim();
+    if (updates.eventOrganizer !== undefined) eventFieldUpdates.organizer = updates.eventOrganizer.trim();
+
+    if (key !== 'global' && Object.keys(eventFieldUpdates).length > 0) {
+      this.updateEvent(key, eventFieldUpdates);
+    } else if (key === 'global' && Object.keys(eventFieldUpdates).length > 0) {
+      const activeEvt = this.getActiveEvent();
+      if (activeEvt) {
+        this.updateEvent(activeEvt.id, eventFieldUpdates);
+      }
+    }
 
     // If saving global or applyToAll is requested, propagate visual & institutional designs to all event configs
     if (key === 'global' || applyToAll) {

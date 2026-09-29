@@ -49,13 +49,28 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const sigHeight = config.signatureSize || 70;
   const stmpSize = config.stampSize || 75;
   const logoHeight = config.logoSize || 70;
-  const logoUmContainerWidth = Math.max(135, Math.round(logoHeight * 1.85));
+  const logoUmContainerWidth = Math.max(140, Math.round(logoHeight * 1.85));
   const logoFsContainerWidth = Math.max(90, Math.round(logoHeight * 1.35));
-  const logoContainerHeight = Math.max(72, Math.round(logoHeight * 1.15));
+  const logoContainerHeight = Math.max(70, Math.round(logoHeight * 1.15));
 
-  const finalLogoUm = config.logoUm || DEFAULT_UM_LOGO || DEFAULT_UM_SVG;
-  const finalLogoFs = config.logoFs || DEFAULT_FS_LOGO || DEFAULT_FS_SVG;
+  const finalLogoUm = config.logoUm !== undefined ? config.logoUm : DEFAULT_UM_LOGO;
+  const finalLogoFs = config.logoFs !== undefined ? config.logoFs : DEFAULT_FS_LOGO;
   const effectiveLogoDsi = config.logoDsi;
+
+  const effectiveEventTitle = config.eventName || event.title;
+  const effectiveEventSubtitle = config.eventSubtitle !== undefined ? config.eventSubtitle : event.subtitle;
+  const effectiveEventDate = config.eventDate || event.date;
+  const effectiveEventLocation = config.eventLocation || event.location;
+  const effectiveEventOrganizer = config.eventOrganizer || (event.organizer ? event.organizer : 'Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang');
+  const locationPrefix = effectiveEventLocation
+    ? `${effectiveEventLocation.split('&')[0].trim().split('Aula')[0].trim() || 'Malang'}, `
+    : 'Malang, ';
+
+  // Frame styles
+  const frameStyle = config.frameStyle || 'classic-double';
+  const titleSize = config.fontSizeTitle || 30;
+  const nameSize = config.fontSizeName || 28;
+  const bodySize = config.fontSizeBody || 13;
 
   return (
     <div
@@ -81,7 +96,7 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
         }}
       />
 
-      {/* Decorative Outer Border */}
+      {/* Decorative Outer Border based on frameStyle */}
       <div 
         className="absolute inset-5 border-[3px] pointer-events-none"
         style={{ borderColor: primaryColor }}
@@ -93,26 +108,30 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
         />
 
         {/* Ornate Corner Accents */}
-        <div 
-          className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4"
-          style={{ borderColor: secondaryColor }}
-        />
-        <div 
-          className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4"
-          style={{ borderColor: secondaryColor }}
-        />
-        <div 
-          className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4"
-          style={{ borderColor: secondaryColor }}
-        />
-        <div 
-          className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4"
-          style={{ borderColor: secondaryColor }}
-        />
+        {frameStyle !== 'minimal-modern' && (
+          <>
+            <div 
+              className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4"
+              style={{ borderColor: secondaryColor }}
+            />
+            <div 
+              className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4"
+              style={{ borderColor: secondaryColor }}
+            />
+            <div 
+              className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4"
+              style={{ borderColor: secondaryColor }}
+            />
+            <div 
+              className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4"
+              style={{ borderColor: secondaryColor }}
+            />
+          </>
+        )}
       </div>
 
-      {/* Main Content Container */}
-      <div className="relative z-10 flex flex-col justify-between h-full px-16 py-10 text-center">
+      {/* Main Content Container with safe vertical spacing */}
+      <div className="relative z-10 flex flex-col justify-between h-full px-12 sm:px-14 py-6 text-center">
         
         {/* TOP HEADER: Logos & Institutional Identity */}
         <div>
@@ -120,33 +139,25 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             className="flex items-center justify-between gap-6 pb-2 border-b"
             style={{ borderColor: '#E2E8F0' }}
           >
-            {/* Logo 1: Logo Universitas Negeri Malang (Paten Resmi UM) */}
-            {showLogoUm ? (
+            {/* Logo 1: Logo Universitas Negeri Malang */}
+            {showLogoUm && finalLogoUm ? (
               <div 
                 style={{ width: `${logoUmContainerWidth}px`, height: `${logoContainerHeight}px` }} 
                 className="flex items-center justify-center shrink-0"
               >
                 <img 
                   src={finalLogoUm} 
-                  alt="Logo Resmi Universitas Negeri Malang" 
-                  crossOrigin="anonymous"
+                  alt="Logo Universitas Negeri Malang" 
                   loading="eager"
                   decoding="sync"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (!target.src.includes('/assets/logo-um.png') && !target.src.startsWith('data:image/svg')) {
-                      target.src = '/assets/logo-um.png';
-                    } else if (target.src.includes('/assets/logo-um.png')) {
-                      target.src = DEFAULT_UM_SVG;
-                    }
-                  }}
-                  style={{ maxHeight: `${logoHeight}px`, maxWidth: `${logoUmContainerWidth}px` }}
+                  style={{ maxHeight: `${logoHeight}px`, maxWidth: `${logoUmContainerWidth}px`, objectFit: 'contain' }}
                   className="object-contain"
                 />
               </div>
             ) : (
               showLogos && <div style={{ width: `${logoUmContainerWidth}px`, height: `${logoContainerHeight}px` }} className="shrink-0" />
             )}
+
 
             {/* Institutional Identity Heading */}
             <div className="flex-1 text-center px-2">
@@ -186,17 +197,8 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                   <img 
                     src={finalLogoFs} 
                     alt="Logo Fakultas Sastra UM" 
-                    crossOrigin="anonymous"
                     loading="eager"
                     decoding="sync"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.src.includes('/assets/logo-fs-um.svg')) {
-                        target.src = '/assets/logo-fs-um.svg';
-                      } else {
-                        target.src = DEFAULT_FS_SVG;
-                      }
-                    }}
                     style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoFsContainerWidth * 0.95)}px` }}
                     className="object-contain"
                   />
@@ -205,7 +207,6 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                   <img 
                     src={effectiveLogoDsi} 
                     alt="Logo Departemen Sastra Indonesia" 
-                    crossOrigin="anonymous"
                     loading="eager"
                     decoding="sync"
                     style={{ maxHeight: `${logoHeight}px`, maxWidth: `${Math.round(logoFsContainerWidth * 0.95)}px` }}
@@ -230,10 +231,10 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
           </div>
 
           {/* Certificate Main Title */}
-          <div className="mt-3">
+          <div className="mt-2.5">
             <h4 
-              className="text-3xl font-extrabold tracking-[0.25em] font-cinzel uppercase mb-1"
-              style={{ color: primaryColor }}
+              className="font-extrabold tracking-[0.25em] font-cinzel uppercase mb-1"
+              style={{ color: primaryColor, fontSize: `${titleSize}px`, lineHeight: 1.15 }}
             >
               {config.certificateTitle || 'SERTIFIKAT'}
             </h4>
@@ -249,8 +250,8 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
         {/* MIDDLE SECTION: Recipient & Honor */}
         <div className="my-auto py-1">
           <p 
-            className="text-xs italic font-serif mb-1 tracking-wide"
-            style={{ color: '#334155' }}
+            className="italic font-serif mb-1 tracking-wide"
+            style={{ color: '#334155', fontSize: `${bodySize}px` }}
           >
             {config.recipientPrefix || 'Diberikan kepada:'}
           </p>
@@ -258,8 +259,8 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
           {/* Recipient Full Name */}
           <div className="inline-block relative px-10 py-1">
             <div 
-              className="text-2xl font-bold font-playfair tracking-wide leading-tight"
-              style={{ color: '#0F172A' }}
+              className="font-bold font-playfair tracking-wide leading-tight"
+              style={{ color: '#0F172A', fontSize: `${nameSize}px` }}
             >
               {participant.fullName}
             </div>
@@ -272,8 +273,8 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
 
           {/* Award Text */}
           <p 
-            className="text-xs mt-2 font-serif"
-            style={{ color: '#334155' }}
+            className="mt-1.5 font-serif"
+            style={{ color: '#334155', fontSize: `${bodySize}px` }}
           >
             {config.awardText || 'Sebagai peserta dalam kegiatan'}
           </p>
@@ -281,39 +282,39 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
           {/* Event Title */}
           <div className="max-w-3xl mx-auto mt-1 px-4">
             <h5 
-              className="text-lg font-bold font-cinzel leading-snug tracking-wide uppercase"
+              className="text-lg font-bold font-cinzel leading-snug tracking-wide uppercase line-clamp-2"
               style={{ color: primaryColor }}
             >
-              {event.title}
+              {effectiveEventTitle}
             </h5>
-            {event.subtitle && (
+            {effectiveEventSubtitle && (
               <p 
                 className="text-xs font-sans mt-0.5 font-medium"
                 style={{ color: '#475569' }}
               >
-                {event.subtitle}
+                {effectiveEventSubtitle}
               </p>
             )}
           </div>
 
           {/* Organizer Statement */}
           <div 
-            className="text-[11px] font-sans mt-2 max-w-xl mx-auto leading-relaxed"
+            className="text-[11px] font-sans mt-1.5 max-w-xl mx-auto leading-relaxed"
             style={{ color: '#475569' }}
           >
             yang diselenggarakan oleh{' '}
             <span className="font-semibold" style={{ color: '#1E293B' }}>
-              Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang
+              {effectiveEventOrganizer}
             </span>
           </div>
         </div>
 
         {/* BOTTOM SECTION: Date, Signature, Stamp & Official QR Code */}
         <div className="pt-2 border-t" style={{ borderColor: '#F1F5F9' }}>
-          <div className="flex items-end justify-between px-4">
+          <div className="flex items-end justify-between px-2">
             
             {/* Left: Security QR Code & Official Verification Notice */}
-            <div className="flex items-center gap-3 text-left w-64">
+            <div className="flex items-center gap-3 text-left w-64 shrink-0">
               {config.showQr !== false && (
                 <div 
                   className="p-1 rounded shrink-0"
@@ -323,11 +324,11 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                     <img 
                       src={qrCodeUrl} 
                       alt="QR Verifikasi Sertifikat" 
-                      className="w-20 h-20"
+                      className="w-18 h-18"
                     />
                   ) : (
                     <div 
-                      className="w-20 h-20 flex items-center justify-center text-[10px]"
+                      className="w-18 h-18 flex items-center justify-center text-[10px]"
                       style={{ backgroundColor: '#F1F5F9', color: '#94A3B8' }}
                     >
                       QR Code
@@ -359,16 +360,16 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             </div>
 
             {/* Center: Official University Seal Watermark or Badge */}
-            <div className="flex flex-col items-center justify-center opacity-85">
+            <div className="flex flex-col items-center justify-center opacity-85 shrink-0">
               <div 
-                className="w-14 h-14 rounded-full border-2 flex items-center justify-center p-1"
+                className="w-13 h-13 rounded-full border-2 flex items-center justify-center p-1"
                 style={{ borderColor: secondaryColor }}
               >
                 <div 
-                  className="w-11 h-11 rounded-full border flex items-center justify-center text-center p-0.5"
+                  className="w-10 h-10 rounded-full border flex items-center justify-center text-center p-0.5"
                   style={{ borderColor: secondaryColor, color: primaryColor }}
                 >
-                  <Award className="w-6 h-6" />
+                  <Award className="w-5 h-5" />
                 </div>
               </div>
               <span 
@@ -379,17 +380,17 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
               </span>
             </div>
 
-            {/* Right: Place, Date, Signer Name, Position */}
-            <div className="text-center w-64">
+            {/* Right: Place, Date, Signer Name, Position, Stamp & Signature */}
+            <div className="text-center w-72 sm:w-80 max-w-[340px] shrink-0">
               <p 
-                className="text-[11px] font-sans mb-1"
+                className="text-[11px] font-sans mb-0.5"
                 style={{ color: '#334155' }}
               >
-                {event.location ? `${event.location.split('&')[0].trim().split('Aula')[0].trim() || 'Malang'}, ` : 'Malang, '}
-                <span className="font-medium">{event.date}</span>
+                {locationPrefix}
+                <span className="font-medium">{effectiveEventDate}</span>
               </p>
               <p 
-                className="text-[11px] font-semibold mb-1 font-sans"
+                className="text-[11px] font-semibold mb-0.5 font-sans"
                 style={{ color: '#1E293B' }}
               >
                 {config.signerPosition || 'Ketua Departemen Sastra Indonesia'}
@@ -398,7 +399,11 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
               {/* Signature Graphic Area with optional official stamp */}
               <div 
                 className="relative mx-auto flex items-center justify-center my-0.5"
-                style={{ height: `${sigHeight}px`, minHeight: '56px', width: '220px' }}
+                style={{ 
+                  height: `${sigHeight}px`, 
+                  minHeight: '52px', 
+                  width: `${Math.max(240, Math.round(sigHeight * 2.3))}px` 
+                }}
               >
                 {/* Official Stamp behind/overlay signature */}
                 {config.stampImage && (
@@ -408,9 +413,10 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                     style={{
                       height: `${stmpSize}px`,
                       width: `${stmpSize}px`,
-                      left: `-${Math.round(stmpSize * 0.25)}px`,
+                      left: `-${Math.round(stmpSize * 0.22)}px`,
+                      objectFit: 'contain',
                     }}
-                    className="absolute top-1/2 -translate-y-1/2 opacity-80 pointer-events-none select-none object-contain z-0"
+                    className="absolute top-1/2 -translate-y-1/2 opacity-85 pointer-events-none select-none z-0"
                   />
                 )}
 
@@ -419,8 +425,12 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                   <img 
                     src={config.signatureImage} 
                     alt="Tanda Tangan Digital" 
-                    style={{ maxHeight: `${sigHeight}px` }}
-                    className="max-w-full object-contain relative z-10"
+                    style={{ 
+                      maxHeight: `${sigHeight}px`, 
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                    }}
+                    className="relative z-10"
                   />
                 ) : (
                   <div className="text-center">
@@ -454,6 +464,7 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                 </p>
               )}
             </div>
+
 
           </div>
         </div>

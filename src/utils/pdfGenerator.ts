@@ -2,7 +2,6 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 import QRCode from 'qrcode';
 import { CertificateConfig, EventItem, Participant } from '../types';
-import { DEFAULT_UM_SVG, DEFAULT_FS_SVG } from './defaultLogos';
 
 export function sanitizeFilename(name: string): string {
   return name
@@ -29,22 +28,83 @@ export async function generateQrDataUrl(text: string): Promise<string> {
   }
 }
 
+/**
+ * Preload an image asset completely before PDF generation begins.
+ * Ensures the image is fully downloaded and ready in memory.
+ */
+export async function preloadImage(src?: string): Promise<HTMLImageElement> {
+  return new Promise((resolve) => {
+    if (!src) {
+      resolve(new Image());
+      return;
+    }
+    const img = new Image();
+    if (!src.startsWith('data:') && !src.startsWith('blob:')) {
+      img.crossOrigin = 'anonymous';
+    }
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      console.warn('Image asset preload warning for:', src.slice(0, 60));
+      resolve(img);
+    };
+    img.src = src;
+  });
+}
+
 export interface GeneratePdfOptions {
-  elementId: string;
-  participant: Participant;
-  event: EventItem;
+  currentConfig?: CertificateConfig;
   config?: CertificateConfig;
+  elementId?: string;
+  participant?: Participant;
+  event?: EventItem;
+  fileName?: string;
 }
 
 /**
- * Renders an isolated, unconstrained 1123x794 px canvas clone to guarantee
- * 100% full capture without any cropping, clipping, or scrolling artifacts
- * regardless of mobile screen width, browser zoom, or responsive preview scales.
+ * Renders an isolated, unconstrained 1123x794 px canvas clone based on currentConfig
+ * to guarantee 100% full capture without any cropping, clipping, or scrolling artifacts.
  */
-async function captureCompleteCertificateCanvas(elementId: string): Promise<HTMLCanvasElement> {
+export async function captureCertificateCanvas(
+  currentConfig: CertificateConfig,
+  elementId: string = 'certificate-render-node'
+): Promise<HTMLCanvasElement> {
   const sourceElement = document.getElementById(elementId);
   if (!sourceElement) {
-    throw new Error('Elemen sertifikat untuk diunduh tidak ditemukan.');
+    throw new Error(`Elemen sertifikat (${elementId}) untuk diunduh tidak ditemukan.`);
+  }
+
+  // Preload all explicit images from currentConfig (never static fallbacks)
+  const assetsToLoad = [
+    currentConfig.logoUm,
+    currentConfig.logoFs,
+    currentConfig.logoDsi,
+    currentConfig.signatureImage,
+    currentConfig.stampImage,
+  ].filter(Boolean) as string[];
+  await Promise.all(assetsToLoad.map((src) => preloadImage(src)));
+
+  // Ensure all web fonts are loaded and ready before canvas capture
+  if (document.fonts && typeof document.fonts.ready?.then === 'function') {
+    try {
+      await document.fonts.ready;
+    } catch {
+      // Non-fatal font readiness error
+    }
+  }
+
+  // Ensure all live DOM images in source element are loaded
+  const liveImages = Array.from(sourceElement.getElementsByTagName('img'));
+  if (liveImages.length > 0) {
+    await Promise.all(
+      liveImages.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          setTimeout(resolve, 2000);
+        });
+      })
+    );
   }
 
   // 1. Create an isolated off-screen wrapper attached directly to document body
@@ -57,8 +117,8 @@ async function captureCompleteCertificateCanvas(elementId: string): Promise<HTML
   wrapper.style.height = '794px';
   wrapper.style.minWidth = '1123px';
   wrapper.style.minHeight = '794px';
-  wrapper.style.overflow = 'visible';
-  wrapper.style.zIndex = '-99999';
+  wrapper.style.overflow = 'hidden';
+  wrapper.style.zIndex = '999999';
   wrapper.style.pointerEvents = 'none';
   wrapper.style.opacity = '1';
   wrapper.style.visibility = 'visible';
@@ -84,7 +144,7 @@ async function captureCompleteCertificateCanvas(elementId: string): Promise<HTML
   document.body.appendChild(wrapper);
 
   try {
-    // 3. Ensure all images inside the clone are fully rasterized and loaded
+    // 3. Ensure image sources are faithfully mirrored from the rendered DOM
     const origImages = Array.from(sourceElement.getElementsByTagName('img'));
     const cloneImages = Array.from(cloned.getElementsByTagName('img'));
 
@@ -92,28 +152,13 @@ async function captureCompleteCertificateCanvas(elementId: string): Promise<HTML
       const orig = origImages[i];
       const clone = cloneImages[i];
       if (orig && clone) {
-        try {
-          if (orig.complete && orig.naturalWidth > 0 && orig.naturalHeight > 0) {
-            const canvasSnap = document.createElement('canvas');
-            canvasSnap.width = orig.naturalWidth;
-            canvasSnap.height = orig.naturalHeight;
-            const ctx = canvasSnap.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(orig, 0, 0);
-              clone.src = canvasSnap.toDataURL('image/png');
-            }
-          } else {
-            // If original image wasn't rendered, provide bulletproof default SVG
-            const alt = (orig.alt || '').toLowerCase();
-            const src = (orig.src || '').toLowerCase();
-            if (alt.includes('malang') || src.includes('logo-um') || alt.includes('logo um')) {
-              clone.src = DEFAULT_UM_SVG;
-            } else if (alt.includes('sastra') || src.includes('logo-fs')) {
-              clone.src = DEFAULT_FS_SVG;
-            }
-          }
-        } catch (e) {
-          console.warn('Canvas rasterization snapshot notice:', e);
+        const activeSrc = orig.currentSrc || orig.src;
+        if (activeSrc) {
+          clone.src = activeSrc;
+        }
+        // Remove crossorigin on data: or blob: URIs to avoid canvas taint
+        if (clone.src.startsWith('data:') || clone.src.startsWith('blob:')) {
+          clone.removeAttribute('crossorigin');
         }
       }
     }
@@ -130,13 +175,13 @@ async function captureCompleteCertificateCanvas(elementId: string): Promise<HTML
               await imgEl.decode();
             }
           } catch {
-            // ignore decode error if image is already handled
+            // decode handled
           }
         })
       );
     }
 
-    // Small delay to allow browser font, CSS transforms and vector graphics to settle
+    // Small delay to allow fonts and transforms to settle
     await new Promise((r) => setTimeout(r, 150));
 
     // 4. Render canvas with explicit full A4 landscape pixel bounds without viewport clipping
@@ -171,6 +216,8 @@ async function captureCompleteCertificateCanvas(elementId: string): Promise<HTML
           wrapperNode.style.width = '1123px';
           wrapperNode.style.height = '794px';
           wrapperNode.style.overflow = 'visible';
+          wrapperNode.style.opacity = '1';
+          wrapperNode.style.visibility = 'visible';
         }
 
         const target = clonedDoc.getElementById('certificate-isolated-export-node');
@@ -198,11 +245,33 @@ async function captureCompleteCertificateCanvas(elementId: string): Promise<HTML
   }
 }
 
-export async function downloadCertificatePdf({
-  elementId,
-  participant,
-}: GeneratePdfOptions): Promise<void> {
-  const canvas = await captureCompleteCertificateCanvas(elementId);
+/**
+ * REFACTORED PDF GENERATOR UTILITY:
+ * Accepts `currentConfig` as a required parameter instead of reading from static constants,
+ * ensuring that every download uses the latest state.
+ */
+export async function generatePDF(
+  currentConfigOrOptions: CertificateConfig | GeneratePdfOptions,
+  maybeOptions?: GeneratePdfOptions
+): Promise<jsPDF> {
+  // Resolve currentConfig and options flexibly
+  let currentConfig: CertificateConfig;
+  let options: GeneratePdfOptions;
+
+  if ('certificateTitle' in currentConfigOrOptions) {
+    currentConfig = currentConfigOrOptions as CertificateConfig;
+    options = maybeOptions || {};
+  } else {
+    options = currentConfigOrOptions as GeneratePdfOptions;
+    currentConfig = options.currentConfig || options.config!;
+  }
+
+  if (!currentConfig) {
+    throw new Error('Konfigurasi sertifikat terkini (currentConfig) wajib disertakan untuk menghasilkan PDF.');
+  }
+
+  const elementId = options.elementId || 'certificate-render-node';
+  const canvas = await captureCertificateCanvas(currentConfig, elementId);
   const imgData = canvas.toDataURL('image/png', 1.0);
 
   // A4 Landscape exact dimensions: 297mm x 210mm
@@ -214,29 +283,69 @@ export async function downloadCertificatePdf({
   });
 
   pdf.addImage(imgData, 'PNG', 0, 0, 297, 210, undefined, 'FAST');
+  return pdf;
+}
 
-  // File naming: Sertifikat_[NamaPeserta]_[NomorSertifikat].pdf
-  const safeName = sanitizeFilename(participant.fullName);
-  const safeNumber = sanitizeFilename(participant.certificateNumber);
-  const fileName = `Sertifikat_${safeName}_${safeNumber}.pdf`;
+/**
+ * Downloads the certificate PDF using the active `currentConfig`.
+ * Ensures every download reflects the latest state.
+ */
+export async function downloadCertificatePdf(
+  currentConfigOrOptions: CertificateConfig | GeneratePdfOptions,
+  maybeOptions?: GeneratePdfOptions
+): Promise<void> {
+  let currentConfig: CertificateConfig;
+  let options: GeneratePdfOptions;
+
+  if ('certificateTitle' in currentConfigOrOptions) {
+    currentConfig = currentConfigOrOptions as CertificateConfig;
+    options = maybeOptions || {};
+  } else {
+    options = currentConfigOrOptions as GeneratePdfOptions;
+    currentConfig = (options.currentConfig || options.config)!;
+  }
+
+  if (!currentConfig) {
+    throw new Error('Konfigurasi sertifikat terkini (currentConfig) wajib disertakan untuk mengunduh PDF.');
+  }
+
+  const pdf = await generatePDF(currentConfig, options);
+
+  // Determine filename dynamically from participant or config
+  let fileName = options.fileName;
+  if (!fileName) {
+    if (options.participant) {
+      const safeName = sanitizeFilename(options.participant.fullName);
+      const safeNumber = sanitizeFilename(options.participant.certificateNumber);
+      fileName = `Sertifikat_${safeName}_${safeNumber}.pdf`;
+    } else {
+      const safeEvent = sanitizeFilename(currentConfig.eventName || 'Sertifikat');
+      fileName = `Sertifikat_${safeEvent}_${Date.now()}.pdf`;
+    }
+  }
 
   pdf.save(fileName);
 }
 
-export async function getCertificatePdfBlobUrl({
-  elementId,
-}: GeneratePdfOptions): Promise<string> {
-  const canvas = await captureCompleteCertificateCanvas(elementId);
-  const imgData = canvas.toDataURL('image/png', 1.0);
+/**
+ * Returns a Blob URL for previewing or embedding the PDF.
+ */
+export async function getCertificatePdfBlobUrl(
+  currentConfigOrOptions: CertificateConfig | GeneratePdfOptions,
+  maybeOptions?: GeneratePdfOptions
+): Promise<string> {
+  let currentConfig: CertificateConfig;
+  let options: GeneratePdfOptions;
 
-  const pdf = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4',
-    compress: true,
-  });
+  if ('certificateTitle' in currentConfigOrOptions) {
+    currentConfig = currentConfigOrOptions as CertificateConfig;
+    options = maybeOptions || {};
+  } else {
+    options = currentConfigOrOptions as GeneratePdfOptions;
+    currentConfig = (options.currentConfig || options.config)!;
+  }
 
-  pdf.addImage(imgData, 'PNG', 0, 0, 297, 210, undefined, 'FAST');
+  const pdf = await generatePDF(currentConfig, options);
   const blob = pdf.output('blob');
   return URL.createObjectURL(blob);
 }

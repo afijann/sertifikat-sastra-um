@@ -90,11 +90,11 @@ export const PublicVerificationPage: React.FC<PublicVerificationPageProps> = ({
     if (!result?.participant || !result?.event || !result?.templateConfig) return;
     setDownloading(true);
     try {
-      await downloadCertificatePdf({
+      await downloadCertificatePdf(result.templateConfig, {
         elementId: 'verification-cert-preview',
         participant: result.participant,
         event: result.event,
-        config: result.templateConfig,
+        currentConfig: result.templateConfig,
       });
     } catch (err) {
       console.error(err);

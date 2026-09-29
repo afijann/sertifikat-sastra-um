@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CertificateProvider } from './context/CertificateContext';
 import { Navbar } from './components/Navbar';
 import { PublicStudentPage } from './pages/PublicStudentPage';
 import { PublicVerificationPage } from './pages/PublicVerificationPage';
@@ -114,9 +115,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2] text-slate-800 flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#4A0E18]">
-      
-      {/* Universal Institutional Header */}
+    <CertificateProvider>
+      <div className="min-h-screen bg-[#F8F6F2] text-slate-800 flex flex-col font-sans selection:bg-[#C5A059] selection:text-[#4A0E18]">
+        
+        {/* Universal Institutional Header */}
       <Navbar
         currentView={currentView}
         onNavigate={(view) => {
@@ -226,6 +228,7 @@ export default function App() {
         </div>
       </footer>
 
-    </div>
+      </div>
+    </CertificateProvider>
   );
 }

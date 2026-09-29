@@ -127,11 +127,11 @@ export const AdminParticipantsPage: React.FC<AdminParticipantsPageProps> = ({
     if (!previewParticipant || !previewEvent || !previewTemplate) return;
     setDownloading(true);
     try {
-      await downloadCertificatePdf({
+      await downloadCertificatePdf(previewTemplate, {
         elementId: 'admin-preview-cert-canvas',
         participant: previewParticipant,
         event: previewEvent,
-        config: previewTemplate,
+        currentConfig: previewTemplate,
       });
     } catch (err) {
       console.error(err);

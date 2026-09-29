@@ -3,6 +3,8 @@ import { CertificateConfig, EventItem, Participant } from '../../types';
 import { CertificateCanvas } from '../../components/CertificateCanvas';
 import { apiClient } from '../../utils/apiClient';
 import { DEFAULT_UM_LOGO, DEFAULT_FS_LOGO, DEFAULT_DSI_LOGO } from '../../utils/defaultLogos';
+import { generatePDF, downloadCertificatePdf } from '../../utils/pdfGenerator';
+import { useCertificate } from '../../context/CertificateContext';
 import { 
   Palette, 
   Upload, 
@@ -21,8 +23,10 @@ import {
   EyeOff,
   ZoomIn,
   ZoomOut,
-  RotateCcw
+  RotateCcw,
+  Download
 } from 'lucide-react';
+
 
 interface AdminTemplatePageProps {
   adminToken: string;
@@ -33,39 +37,72 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
   adminToken,
   initialEventId,
 }) => {
+  const {
+    certificateConfig,
+    setCertificateConfig,
+    updateCertificateConfig,
+    saveCertificateConfig,
+  } = useCertificate();
+
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedKey, setSelectedKey] = useState<string>(initialEventId || 'global');
-  const [config, setConfig] = useState<CertificateConfig | null>(null);
+  const config = certificateConfig;
+  const setConfig = setCertificateConfig;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applyToAll, setApplyToAll] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [demoParticipantName, setDemoParticipantName] = useState<string>('Siti Rahmawati, S.Pd.');
 
-  // Demo participant for live preview
-  const demoParticipant: Participant = {
+  // Find currently selected event or active event from server list
+  const activeMatchedEvent = selectedKey !== 'global'
+    ? events.find(e => e.id === selectedKey)
+    : events.find(e => e.status === 'active') || events[0];
+
+  const effectiveEvent: EventItem = {
+    id: activeMatchedEvent?.id || (selectedKey !== 'global' ? selectedKey : 'evt-active'),
+    title: (config?.eventName && config.eventName.trim()) || activeMatchedEvent?.title || 'Workshop Literasi Informasi 2026',
+    subtitle: config?.eventSubtitle !== undefined ? config.eventSubtitle : (activeMatchedEvent?.subtitle || 'Departemen Sastra Indonesia'),
+    description: activeMatchedEvent?.description || '',
+    date: (config?.eventDate && config.eventDate.trim()) || activeMatchedEvent?.date || '21 September 2026',
+    location: config?.eventLocation || activeMatchedEvent?.location || 'Aula Gedung D8 FS Universitas Negeri Malang',
+    organizer: config?.eventOrganizer || activeMatchedEvent?.organizer || 'Departemen Sastra Indonesia\nFakultas Sastra\nUniversitas Negeri Malang',
+    certificatePrefix: activeMatchedEvent?.certificatePrefix || 'WS-PKM/DSI/FS-UM/2026/',
+    status: activeMatchedEvent?.status || 'active',
+    slug: activeMatchedEvent?.slug || 'kegiatan',
+    counter: activeMatchedEvent?.counter || 1,
+    createdAt: activeMatchedEvent?.createdAt || '',
+    updatedAt: activeMatchedEvent?.updatedAt || '',
+  };
+
+  const effectiveParticipant: Participant = {
     id: 'demo-p',
-    eventId: selectedKey,
-    fullName: 'Siti Rahmawati, S.Pd.',
-    certificateNumber: 'WS-PKM/DSI/FS-UM/2026/001',
+    eventId: effectiveEvent.id,
+    fullName: demoParticipantName.trim() || 'Siti Rahmawati, S.Pd.',
+    certificateNumber: `${effectiveEvent.certificatePrefix.endsWith('/') ? effectiveEvent.certificatePrefix : effectiveEvent.certificatePrefix + '/'}001`,
     createdAt: new Date().toISOString(),
     verificationCode: 'VER-SAMPLE',
   };
 
-  const demoEvent: EventItem = {
-    id: 'demo-e',
-    title: 'WORKSHOP PROGRAM KREATIVITAS MAHASISWA (PKM)',
-    subtitle: 'Departemen Sastra Indonesia',
-    description: '',
-    date: '21 September 2026',
-    location: 'Aula Gedung D8 FS Universitas Negeri Malang',
-    organizer: 'Departemen Sastra Indonesia\nFakultas Sastra\nUniversitas Negeri Malang',
-    certificatePrefix: 'WS-PKM/DSI/FS-UM/2026/',
-    status: 'active',
-    slug: 'workshop-pkm',
-    counter: 1,
-    createdAt: '',
-    updatedAt: '',
+  // Test download PDF function for admin to verify adjustments immediately
+  const handleTestDownloadPdf = async () => {
+    if (!certificateConfig) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadCertificatePdf(certificateConfig, {
+        elementId: 'template-live-preview-canvas',
+        participant: effectiveParticipant,
+        event: effectiveEvent,
+        currentConfig: certificateConfig,
+      });
+    } catch (err: any) {
+      console.error('Test PDF download error:', err);
+      alert('Gagal mengunduh tes PDF: ' + (err.message || 'Coba sesaat lagi.'));
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   useEffect(() => {
@@ -90,7 +127,15 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     setError(null);
     try {
       const data = await apiClient.getTemplateConfig(adminToken, key);
-      setConfig(data);
+      const matched = key !== 'global' ? events.find(e => e.id === key) : events.find(e => e.status === 'active') || events[0];
+      setConfig({
+        ...data,
+        eventName: data.eventName || matched?.title || 'Workshop Literasi Informasi 2026',
+        eventSubtitle: data.eventSubtitle !== undefined ? data.eventSubtitle : (matched?.subtitle || ''),
+        eventDate: data.eventDate || matched?.date || '21 September 2026',
+        eventLocation: data.eventLocation || matched?.location || 'Universitas Negeri Malang',
+        eventOrganizer: data.eventOrganizer || matched?.organizer || 'Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang',
+      });
     } catch (err) {
       console.error(err);
       setError('Gagal memuat template.');
@@ -108,12 +153,13 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
     setError(null);
 
     try {
-      const saved = await apiClient.saveTemplateConfig(adminToken, selectedKey, config, applyToAll);
-      if (saved) {
-        setConfig(saved);
+      const success = await saveCertificateConfig(adminToken, selectedKey, applyToAll, config);
+      if (success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3500);
+      } else {
+        setError('Gagal menyimpan perubahan template.');
       }
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
       setError(err.message || 'Gagal menyimpan template.');
     } finally {
@@ -136,30 +182,21 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
 
     const reader = new FileReader();
     reader.onload = () => {
-      if (reader.result && config) {
-        setConfig({
-          ...config,
-          [field]: reader.result as string,
-        });
+      if (reader.result) {
+        updateCertificateConfig({ [field]: reader.result as string });
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleRemoveImage = (field: 'logoUm' | 'logoFs' | 'logoDsi' | 'signatureImage' | 'stampImage') => {
-    if (config) {
-      setConfig({
-        ...config,
-        [field]: '',
-      });
-    }
+    updateCertificateConfig({ [field]: '' });
   };
 
   const handleClearAllLogos = () => {
-    if (!config) return;
     if (window.confirm('Hapus semua file logo dan sembunyikan kotak placeholder otomatis?')) {
-      setConfig({
-        ...config,
+      updateCertificateConfig({
         logoUm: '',
         logoFs: '',
         logoDsi: '',
@@ -240,13 +277,112 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
       ) : (
         <form onSubmit={handleSave} className="space-y-8">
           
-          {/* SECTION 1: UPLOAD LOGO RESMI INSTITUSI */}
+          {/* SECTION 1: IDENTITAS KEGIATAN & DATA CONTOH PESERTA (SINKRON PREVIEW & PDF) */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                <span>1. Identitas Kegiatan & Nama Peserta Uji (Sinkron Penuh ke PDF)</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Setiap perubahan nama kegiatan, tema, tanggal, tempat, dan nama peserta langsung terlihat pada Preview dan otomatis tertanam ke dalam file PDF hasil unduhan (What You See Is What You Download).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="md:col-span-2">
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nama Kegiatan (Wajib Sinkron Otomatis ke PDF)
+                </label>
+                <input
+                  type="text"
+                  id="template-input-event-name"
+                  value={config.eventName || ''}
+                  onChange={(e) => setConfig({ ...config, eventName: e.target.value })}
+                  placeholder="Contoh: Seminar Nasional Perpustakaan dan Informasi 2026"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724] font-semibold text-slate-900 bg-amber-50/30"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Tema / Sub-judul Kegiatan (Opsional)
+                </label>
+                <input
+                  type="text"
+                  id="template-input-event-subtitle"
+                  value={config.eventSubtitle || ''}
+                  onChange={(e) => setConfig({ ...config, eventSubtitle: e.target.value })}
+                  placeholder="Contoh: Tantangan dan Peluang Bahasa Indonesia di Era AI"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nama Peserta Contoh (Untuk Live Preview & Unduh Tes PDF)
+                </label>
+                <input
+                  type="text"
+                  id="template-input-demo-participant"
+                  value={demoParticipantName}
+                  onChange={(e) => setDemoParticipantName(e.target.value)}
+                  placeholder="Contoh: Dr. B / Siti Rahmawati, S.Pd."
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724] font-semibold text-[#6B1724] bg-maroon-50/20"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Tanggal Pelaksanaan
+                </label>
+                <input
+                  type="text"
+                  id="template-input-event-date"
+                  value={config.eventDate || ''}
+                  onChange={(e) => setConfig({ ...config, eventDate: e.target.value })}
+                  placeholder="Contoh: 21 September 2026"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Tempat / Kota Pelaksanaan
+                </label>
+                <input
+                  type="text"
+                  id="template-input-event-location"
+                  value={config.eventLocation || ''}
+                  onChange={(e) => setConfig({ ...config, eventLocation: e.target.value })}
+                  placeholder="Contoh: Aula Gedung D8 FS Universitas Negeri Malang"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Identitas Penyelenggara
+                </label>
+                <input
+                  type="text"
+                  id="template-input-event-organizer"
+                  value={config.eventOrganizer || ''}
+                  onChange={(e) => setConfig({ ...config, eventOrganizer: e.target.value })}
+                  placeholder="Contoh: Departemen Sastra Indonesia, Fakultas Sastra, Universitas Negeri Malang"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: UPLOAD LOGO RESMI INSTITUSI */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-[#6B1724]" />
-                  <span>1. Pengaturan & Upload Logo Resmi Institusi</span>
+                  <span>2. Pengaturan & Upload Logo Resmi Institusi</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Unggah file logo resmi berformat PNG/JPG transparan. Anda dapat menghapus logo sewaktu-waktu atau menyembunyikan logo agar sertifikat hanya menampilkan teks institusi.
@@ -518,12 +654,12 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
             </div>
           </div>
 
-          {/* SECTION 2: TANDA TANGAN & STEMPEL RESMI */}
+          {/* SECTION 3: TANDA TANGAN & STEMPEL RESMI */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
             <div>
               <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel flex items-center gap-2">
                 <PenTool className="w-4 h-4 text-[#6B1724]" />
-                <span>2. Tanda Tangan & Stempel Resmi</span>
+                <span>3. Tanda Tangan & Stempel Resmi</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Format PNG transparan dianjurkan. Gunakan slider di bawah untuk memperbesar atau memperkecil ukuran tanda tangan dan stempel sesuai kebutuhan visual sertifikat.
@@ -731,21 +867,62 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
             </div>
           </div>
 
-          {/* SECTION 3: TEKS DAN PEJABAT PENANDATANGAN */}
+          {/* SECTION 4: IDENTITAS INSTITUSI, REDAKSI & TIPOGRAFI SERTIFIKAT */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4 text-xs">
             <div>
               <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel">
-                3. Teks Sertifikat & Data Penandatangan
+                4. Identitas Institusi, Redaksi & Tipografi
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Atur redaksi sertifikat dan informasi pejabat yang berwenang menandatangani dokumen
+                Sesuaikan nama institusi, fakultas, jurusan, teks redaksi, pilihan bingkai, warna tema, serta ukuran font sertifikat
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Judul Sertifikat
+                  Nama Universitas
+                </label>
+                <input
+                  type="text"
+                  value={config.universityName || ''}
+                  onChange={(e) => setConfig({ ...config, universityName: e.target.value })}
+                  placeholder="UNIVERSITAS NEGERI MALANG"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nama Fakultas
+                </label>
+                <input
+                  type="text"
+                  value={config.facultyName || ''}
+                  onChange={(e) => setConfig({ ...config, facultyName: e.target.value })}
+                  placeholder="FAKULTAS SASTRA"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nama Departemen / Program Studi
+                </label>
+                <input
+                  type="text"
+                  value={config.departmentName || ''}
+                  onChange={(e) => setConfig({ ...config, departmentName: e.target.value })}
+                  placeholder="DEPARTEMEN SASTRA INDONESIA"
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Judul Dokumen
                 </label>
                 <input
                   type="text"
@@ -778,6 +955,24 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724]"
                 />
               </div>
+            </div>
+
+            {/* Frame Style & Theme Color */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Gaya Bingkai & Ornamen Border
+                </label>
+                <select
+                  value={config.frameStyle || 'classic-double'}
+                  onChange={(e) => setConfig({ ...config, frameStyle: e.target.value as any })}
+                  className="w-full px-3 py-2 border rounded-lg focus:border-[#6B1724] bg-white font-medium"
+                >
+                  <option value="classic-double">Klasik Akademik Ganda (Standard UM)</option>
+                  <option value="ornament-gold">Ornamen Emas Sudut Khas (Ornament Gold)</option>
+                  <option value="minimal-modern">Minimalis Modern Ramping (Clean Minimal)</option>
+                </select>
+              </div>
 
               <div>
                 <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -801,7 +996,7 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                         type="button"
                         key={c.color}
                         onClick={() => setConfig({ ...config, primaryColor: c.color })}
-                        className="px-2 py-1 rounded text-[10px] font-semibold border flex items-center gap-1"
+                        className="px-2 py-1 rounded text-[10px] font-semibold border flex items-center gap-1 cursor-pointer"
                         style={{
                           borderColor: config.primaryColor === c.color ? c.color : '#CBD5E1',
                           backgroundColor: config.primaryColor === c.color ? `${c.color}15` : 'transparent',
@@ -814,7 +1009,69 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
 
+            {/* Typography Font Sliders */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold text-slate-700">Font Judul:</span>
+                  <span className="font-mono font-bold text-[#6B1724]">{config.fontSizeTitle || 30} px</span>
+                </div>
+                <input
+                  type="range"
+                  min="22"
+                  max="44"
+                  value={config.fontSizeTitle || 30}
+                  onChange={(e) => setConfig({ ...config, fontSizeTitle: Number(e.target.value) })}
+                  className="w-full accent-[#6B1724] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold text-slate-700">Font Nama Peserta:</span>
+                  <span className="font-mono font-bold text-[#6B1724]">{config.fontSizeName || 28} px</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="42"
+                  value={config.fontSizeName || 28}
+                  onChange={(e) => setConfig({ ...config, fontSizeName: Number(e.target.value) })}
+                  className="w-full accent-[#6B1724] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold text-slate-700">Font Teks Redaksi:</span>
+                  <span className="font-mono font-bold text-[#6B1724]">{config.fontSizeBody || 13} px</span>
+                </div>
+                <input
+                  type="range"
+                  min="11"
+                  max="18"
+                  value={config.fontSizeBody || 13}
+                  onChange={(e) => setConfig({ ...config, fontSizeBody: Number(e.target.value) })}
+                  className="w-full accent-[#6B1724] cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 5: PEJABAT PENANDATANGAN & LEGALITAS */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4 text-xs">
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel">
+                5. Pejabat Penandatangan & Legalitas
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Atur nama pejabat penandatangan, jabatan resmi, nomor induk pegawai, dan kode verifikasi
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Nama Lengkap Penandatangan
@@ -880,40 +1137,63 @@ export const AdminTemplatePage: React.FC<AdminTemplatePageProps> = ({
                   className="rounded border-slate-300 text-[#6B1724] focus:ring-[#6B1724] w-4 h-4"
                 />
                 <span className="text-xs font-bold text-slate-800">
-                  Terapkan desain template ini ke seluruh kegiatan aktif (termasuk Workshop PKM)
+                  Terapkan konfigurasi template ini ke seluruh kegiatan aktif (termasuk kegiatan saat ini)
                 </span>
               </label>
               <p className="text-[11px] text-slate-500 pl-6">
-                Memastikan logo baru, perbesaran ukuran logo, tanda tangan, stempel, dan format langsung tampil di halaman publik mahasiswa.
+                Memastikan nama kegiatan, logo, ukuran, tanda tangan, stempel, dan format langsung tampil di halaman publik mahasiswa dan hasil unduhan PDF.
               </p>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-3 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
-            >
-              <Save className="w-4 h-4 text-[#C5A059]" />
-              <span>{saving ? 'Menyimpan Template...' : 'SIMPAN PENGATURAN TEMPLATE'}</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleTestDownloadPdf}
+                disabled={downloadingPdf}
+                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+                title="Unduh file PDF sertifikat contoh untuk melihat hasil cetak nyata"
+              >
+                <Download className="w-4 h-4 text-emerald-600" />
+                <span>{downloadingPdf ? 'Membuat PDF...' : 'UNDUH TES PDF'}</span>
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-3 bg-[#6B1724] hover:bg-[#4A0E18] text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+              >
+                <Save className="w-4 h-4 text-[#C5A059]" />
+                <span>{saving ? 'Menyimpan Template...' : 'SIMPAN PENGATURAN TEMPLATE'}</span>
+              </button>
+            </div>
           </div>
 
           {/* LIVE PREVIEW SECTION */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel">
-                Live Preview Desain Sertifikat
-              </h2>
-              <span className="text-xs text-slate-400">
-                Format Standar A4 Landscape
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider font-cinzel">
+                  Live Preview Desain Sertifikat
+                </h2>
+                <span className="text-xs text-slate-400">
+                  Format Standar A4 Landscape (1123 × 794 piksel) — Identik 100% dengan Hasil Unduhan PDF
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleTestDownloadPdf}
+                disabled={downloadingPdf}
+                className="self-start sm:self-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{downloadingPdf ? 'Mengunduh...' : 'Unduh Tes PDF Hasil Nyata'}</span>
+              </button>
             </div>
 
             <div className="w-full overflow-x-auto bg-slate-100 p-4 rounded-xl border border-slate-200 flex justify-center shadow-inner">
               <div className="shadow-2xl rounded overflow-hidden">
                 <CertificateCanvas
                   id="template-live-preview-canvas"
-                  participant={demoParticipant}
-                  event={demoEvent}
+                  participant={effectiveParticipant}
+                  event={effectiveEvent}
                   config={config}
                 />
               </div>
